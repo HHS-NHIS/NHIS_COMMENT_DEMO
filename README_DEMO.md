@@ -19,3 +19,6 @@ Security: management edits, draft uploads, paid model calls, and import endpoint
 
 ## Deferred work
 Independent analyst review, form-letter prevalence methodology, attachment extraction verification, and governance approval for publication on third-party services. Hosting the public comments on Railway is not equivalent to any agency cloud authorization.
+
+## V9.4 public-display QC (2026-10-20)
+Removed stale claims of password protection and attachment/model-coding incompleteness, made comment-detail annotations view-only on the public site, and packaged a SQLite snapshot with journal state matching Railway. Automated tests cover the hosted endpoints, exports, immutable database, same-origin evidence query, and public mode. The snapshot remains provisional; no human validation or hosting authorization is implied.
