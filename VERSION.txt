@@ -1,6 +1,5 @@
 NHIS Comment Intelligence public demo
-Version: V9.4 public read-only QC build 2026-10-20
-Snapshot: 1,693 model-coded comments, 60 with attachments; labels provisional.
-No login, no OpenAI runtime calls.
-
-V9.5: public Evidence search/AI status wording; documented Claude-assisted attachment text and fresh GitHub test setup.
+Version: V9.6 reproducibility and documentation QC — 2026-10-20
+Snapshot: 1,693 publicly indexed comment records; AI assignments provisional.
+No login, no runtime paid OpenAI calls.
+Existing AI classifications unchanged.
