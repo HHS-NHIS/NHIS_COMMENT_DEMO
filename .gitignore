@@ -12,3 +12,8 @@ validation/
 reports/
 *.zip
 !data/comments.sqlite3.xz
+
+# NEVER publish unblinded scoring keys or analyst decisions
+*PRIVATE*SCORING*KEY*
+*ANSWER*KEY*
+*coded_validation*
