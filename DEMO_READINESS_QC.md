@@ -1,4 +1,4 @@
-# NHIS Comment Intelligence — V9.4 public-demo QC (20 October 2026)
+# NHIS Comment Intelligence — V9.6 public-demo QC (20 October 2026)
 
 ## Current deployment snapshot
 - Public, no login, read-only, with **paid OpenAI functionality disabled**.
@@ -34,4 +34,11 @@
 
 ## V9.5 public wording / Claude Q C (2026-10-20)
 
-Verified three Claude-assisted image-derived attachment texts in the snapshot, corrected README and UI provenance wording, hid consent prompts in public evidence mode with CSS and JavaScript, removed outdated template-QC timeline language while retaining unvalidated-model warning, and updated fresh-clone test instructions. No AI labels or raw data were modified. Note: cluster labels still vary; the public AI-frequency chart remains withheld.
+Verified three Claude-assisted image-derived attachment texts in the snapshot, corrected README and UI provenance wording, hid consent prompts in public evidence mode with CSS and JavaScript, removed outdated template-QC timeline language while retaining unvalidated-model warning, and updated fresh-clone test instructions. No AI labels or raw data were modified. The database consistency test finds identical labels within 53 exact-content groups (710 records), but thematic accuracy remains unvalidated; the public AI-frequency chart remains withheld.
+
+## October 20 V9.6 reproducibility follow-up
+- Documented received-submission observations (2,012 on Oct 19; 3,048 reported Oct 20) without equating them with the 1,693 publicly posted/indexed comment records in this snapshot. Live 3,048 value has not been independently verified from this environment.
+- Added a deterministic blinded AI-label pilot (477 theme/comment pairs), private answer-key workflow and score --key compatibility; no analyst labels have been collected for this newer sample.
+- Added controlled master-to-public snapshot exporter and a seven-step update guide. Public source still excludes the private validation key.
+- Added conservative template-decision migration and full-cluster reassembly on changed/new members. This is a code safeguard, not an assertion that all future refreshes are cost-free; changed shared text may require new model work.
+- Existing AI counts are unaffected by this release; no new comments were retrieved or classified.
