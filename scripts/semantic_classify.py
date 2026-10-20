@@ -31,6 +31,7 @@ Typical use (Anaconda Prompt, dashboard folder):
 """
 from __future__ import annotations
 import argparse, csv, hashlib, json, re, sys
+from difflib import SequenceMatcher
 from collections import Counter, defaultdict
 from contextlib import closing
 from pathlib import Path
@@ -361,6 +362,73 @@ def _containment(quote, sentence):
     return sum(w in sw for w in q) / len(q) if q else 0.0
 
 
+def extend_pending_to_affected_clusters(db, all_records, pending_records):
+    """Reassemble every member when a new/changed copy affects a template's majority text.
+
+    This avoids leaving older copies with labels derived from a superseded version. Existing
+    cached model units are reused. Changes in actual template wording may require an API call;
+    do not claim such changes are always free.
+    """
+    if not pending_records:
+        return pending_records
+    rows=list(db.execute('SELECT comment_id,cluster_id FROM comment_clusters'))
+    cluster_by_id={r[0]:r[1] for r in rows}
+    affected={cluster_by_id[r['id']] for r in pending_records if r['id'] in cluster_by_id}
+    prior={r['id'] for r in pending_records}
+    for rec in all_records:
+        if rec['id'] not in prior and cluster_by_id.get(rec['id']) in affected:
+            pending_records.append(rec)
+            prior.add(rec['id'])
+    return pending_records
+
+
+def carry_forward_template_reviews(db, units):
+    """Conservatively carry documented reviewer decisions to a slightly changed template.
+
+    Only reviews with stored original template text are eligible; older untraceable rows
+    never silently migrate. Added text preserves approvals if their quotation remains.
+    Rejections require 98% template similarity. Ambiguous matches stay for human review.
+    """
+    if not db.execute("SELECT 1 FROM sqlite_master WHERE name='template_label_review'").fetchone():
+        return 0
+    cols={r[1] for r in db.execute('PRAGMA table_info(template_label_review)')}
+    if 'template_text' not in cols:
+        db.execute("ALTER TABLE template_label_review ADD COLUMN template_text TEXT NOT NULL DEFAULT ''")
+    if 'example_comment_id' not in cols:
+        db.execute("ALTER TABLE template_label_review ADD COLUMN example_comment_id TEXT NOT NULL DEFAULT ''")
+    rows=list(db.execute('SELECT * FROM template_label_review'))
+    if not rows: return 0
+    current_templates={u['sha']:u['text'] for u in units.values() if u['kind']=='template'}
+    existing={(r['template_sha'],r['theme_id']) for r in rows}
+    migrated=[]
+    for sha,text in current_templates.items():
+        if any(r['template_sha']==sha for r in rows): continue
+        candidates=[]
+        for row in rows:
+            old=row['template_text']
+            if not old: continue
+            ratio=SequenceMatcher(None,skey(text),skey(old),autojunk=False).ratio()
+            if ratio>=0.94: candidates.append((ratio,row))
+        if not candidates: continue
+        candidates.sort(key=lambda x:-x[0]); best=candidates[0][0]
+        # A tie between unrelated prior templates is not safe to migrate.
+        if len({row['template_sha'] for ratio,row in candidates if ratio>=best-0.005})>1: continue
+        for similarity,row in candidates:
+            if similarity!=best and row['template_sha']!=candidates[0][1]['template_sha']: continue
+            tid=row['theme_id'];decision=row['decision'];ev=row['evidence']
+            if (sha,tid) in existing: continue
+            if decision==1 and (not ev or comparable_quote(ev) not in comparable_quote(text)): continue
+            if decision==0 and similarity<0.98: continue
+            migrated.append((sha,tid,decision,ev,'auto-carry:'+row['reviewer'],
+                ('Tentative migration from '+row['template_sha'][:16]+'; confirm if text changed materially. '+row['note'])[:500],
+                utc_now(),text,row['example_comment_id']))
+            existing.add((sha,tid))
+    if migrated:
+        with db:
+            db.executemany("INSERT OR IGNORE INTO template_label_review (template_sha,theme_id,decision,evidence,reviewer,note,reviewed_at,template_text,example_comment_id) VALUES(?,?,?,?,?,?,?,?,?)", migrated)
+    return len(migrated)
+
+
 def _template_reviews(db):
     if not db.execute("SELECT name FROM sqlite_master WHERE name='template_label_review'").fetchone():
         return {}
@@ -415,7 +483,9 @@ def assemble(db, rec, unit_ids, units, parts, model, boilerplate=None, reviews=N
 
 REVIEW_DDL = ("CREATE TABLE IF NOT EXISTS template_label_review (template_sha TEXT NOT NULL, theme_id TEXT NOT NULL, "
               "decision INTEGER NOT NULL, evidence TEXT NOT NULL DEFAULT '', reviewer TEXT NOT NULL DEFAULT '', "
-              "note TEXT NOT NULL DEFAULT '', reviewed_at TEXT NOT NULL, PRIMARY KEY(template_sha, theme_id))")
+              "note TEXT NOT NULL DEFAULT '', reviewed_at TEXT NOT NULL, "
+              "template_text TEXT NOT NULL DEFAULT '', example_comment_id TEXT NOT NULL DEFAULT '', "
+              "PRIMARY KEY(template_sha, theme_id))")
 
 
 def export_template_review(db, model, path):
@@ -451,6 +521,11 @@ def export_template_review(db, model, path):
 
 def apply_template_review(db, path):
     db.execute(REVIEW_DDL)
+    columns={r[1] for r in db.execute('PRAGMA table_info(template_label_review)')}
+    if 'template_text' not in columns:
+        db.execute("ALTER TABLE template_label_review ADD COLUMN template_text TEXT NOT NULL DEFAULT ''")
+    if 'example_comment_id' not in columns:
+        db.execute("ALTER TABLE template_label_review ADD COLUMN example_comment_id TEXT NOT NULL DEFAULT ''")
     valid = {t['id'] for t in taxonomy()['themes']}
     staged, problems = [], []
     with open(path, encoding='utf-8-sig', newline='') as f:
@@ -465,11 +540,14 @@ def apply_template_review(db, path):
             if not (r.get('reviewer') or '').strip():
                 problems.append(f'row {i}: reviewer initials required'); continue
             staged.append((r['template_sha'], r['theme_id'], 1 if d in ('1', 'yes', 'y') else 0,
-                           (r.get('ai_evidence') or '').strip(), r['reviewer'].strip(), (r.get('note') or '').strip(), utc_now()))
+                           (r.get('ai_evidence') or '').strip(), r['reviewer'].strip(), (r.get('note') or '').strip(), utc_now(),
+                           r.get('template_text',''),r.get('example_comment_id','')))
     if problems:
         raise ValueError('Template review not applied: ' + '; '.join(problems[:10]))
     with db:
-        db.executemany('INSERT OR REPLACE INTO template_label_review VALUES(?,?,?,?,?,?,?)', staged)
+        db.executemany('''INSERT OR REPLACE INTO template_label_review
+               (template_sha,theme_id,decision,evidence,reviewer,note,reviewed_at,template_text,example_comment_id)
+               VALUES(?,?,?,?,?,?,?,?,?)''', staged)
         # force re-assembly of every comment (free: uses cached model results)
         db.execute("UPDATE semantic_status SET coding_method='needs_reassembly' WHERE coding_method=?", (METHOD,))
     return len(staged)
@@ -581,15 +659,22 @@ def main(argv=None):
         if a.apply_template_review:
             n = apply_template_review(db, a.apply_template_review)
             print(f'Applied {n} template decisions. Now run: python scripts\\semantic_classify.py --recode-all --approve-paid-api '
-                  '(re-assembly from cached results is free).'); return
+                  '(existing cached units reassemble without API calls; genuinely changed units may cost money).'); return
         if a.consistency_report:
             print(json.dumps(consistency_report(db, Path(a.output) / 'ai_form_letter_consistency.csv'), indent=2)); return
         all_recs = list(full_texts(db))
         all_units, all_cu, _ = build_units(db, all_recs)
+        migrated=carry_forward_template_reviews(db, all_units)
+        if migrated: print(f'Carried {migrated} traceable template reviewer decisions to updated template wording; check audit notes.')
         healed_units, healed_comments = heal_cache(db, a.model, all_units, all_cu)
         if healed_units:
             print(f'Cache check: removed {healed_units} misfiled unit results; {healed_comments} comments will be re-assembled/re-coded.')
         todo = list(pending(db, a.model, a.recode_all))
+        prior_count=len(todo)
+        if not a.limit:  # limited smoke tests must not accidentally rewrite the whole cluster
+            todo=extend_pending_to_affected_clusters(db, all_recs, todo)
+            if len(todo)>prior_count:
+                print(f'Cluster-safe refresh: reassemble {len(todo)-prior_count} existing cluster copies alongside new/changed comments.')
         skipped = [r for r in todo if not r['complete_attachment']]
         if not a.include_partial:
             todo = [r for r in todo if r['complete_attachment']]
