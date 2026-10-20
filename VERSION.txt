@@ -1,0 +1,4 @@
+NHIS Comment Intelligence public demo
+Version: V9.3 public read-only build 2026-10-20
+Snapshot: 1,693 GPT-coded comments; labels provisional, not human-validated.
+No login, no OpenAI runtime calls.

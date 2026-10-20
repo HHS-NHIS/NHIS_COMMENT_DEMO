@@ -1,0 +1,12 @@
+**/__pycache__/
+**/*.pyc
+**/.DS_Store
+**/.env*
+**/backups/**
+**/attachments/**
+*.sqlite3
+reports/
+validation/
+tests/
+*.zip
+*.bat

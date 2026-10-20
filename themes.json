@@ -1,0 +1,509 @@
+{
+  "schema_version": "v4.2-qc-boilerplate-masked-20261020",
+  "notes": "Preliminary keyword SCREENING taxonomy, not a validated classifier. V4 (QC): masks form-letter boilerplate that states facts rather than commenter concerns (global_exclusions), removes docket-ubiquitous terms ('redesign', '2028', '2027'), makes acronyms case-sensitive (ADA, IDD, PEM, THC, CBD, QC, PASC), and adds theme-specific context exclusions. Keywords prefixed 're:' are regular expressions. Validate with the validation_sample export before any prevalence claim.",
+  "themes": [
+    {
+      "id": "questionnaire_content",
+      "name": "Questionnaire content and revisions",
+      "description": "New, revised, removed questions, sections and specific measures",
+      "keywords": [
+        "questionnaire",
+        "remove the question",
+        "removed questions",
+        "eliminate questions",
+        "retain the question",
+        "question wording",
+        "question content",
+        "new question",
+        "items removed",
+        "survey questions",
+        "deletion of"
+      ]
+    },
+    {
+      "id": "trend_continuity",
+      "name": "Trend continuity and comparability",
+      "description": "Impact of changing measurement on historical trends and cross-year comparisons",
+      "keywords": [
+        "trend",
+        "time series",
+        "comparability",
+        "continuity",
+        "historical data",
+        "across years",
+        "year-to-year",
+        "longitudinal",
+        "break in series",
+        "baseline",
+        "re:comparable\\s+(?:over\\s+time|across|with\\s+(?:prior|previous|past|earlier)|to\\s+(?:prior|previous|past|earlier)|data|estimates|measures|trend)"
+      ],
+      "exclude": [
+        "re:baseline\\s+questions\\s+(?:about|on)\\s+fatigue"
+      ]
+    },
+    {
+      "id": "disability",
+      "name": "Disability and functional limitations",
+      "description": "Disability measures, functioning and accessibility",
+      "keywords": [
+        "disability",
+        "disabled",
+        "functional limitation",
+        "functioning",
+        "washington group",
+        "accessibility",
+        "vision impairment",
+        "hearing impairment",
+        "mobility limitation"
+      ]
+    },
+    {
+      "id": "chronic_conditions",
+      "name": "Chronic conditions and health topics",
+      "description": "Disease-specific and health-condition coverage",
+      "keywords": [
+        "chronic disease",
+        "chronic condition",
+        "diabetes",
+        "asthma",
+        "cardiovascular",
+        "hypertension",
+        "cancer",
+        "arthritis",
+        "alzheimer",
+        "dementia",
+        "depression"
+      ]
+    },
+    {
+      "id": "healthcare_access",
+      "name": "Health care access and insurance",
+      "description": "Access, utilization, affordability and coverage",
+      "keywords": [
+        "health insurance",
+        "uninsured",
+        "medicaid",
+        "medicare",
+        "healthcare access",
+        "health care access",
+        "affordability",
+        "out-of-pocket",
+        "usual source of care",
+        "unmet medical"
+      ]
+    },
+    {
+      "id": "sample_design",
+      "name": "Sample design and representativeness",
+      "description": "Sampling strategy, coverage, representativeness and precision",
+      "keywords": [
+        "sampling",
+        "sample design",
+        "sample size",
+        "representative",
+        "representativeness",
+        "oversample",
+        "undersample",
+        "standard error",
+        "precision",
+        "small area",
+        "response rate"
+      ]
+    },
+    {
+      "id": "weighting_estimation",
+      "name": "Weighting and statistical methods",
+      "description": "Weights, variance estimation and analytic methods",
+      "keywords": [
+        "weighting",
+        "survey weights",
+        "variance",
+        "calibration",
+        "design effect",
+        "standard errors",
+        "replicate weights",
+        "statistical reliability"
+      ]
+    },
+    {
+      "id": "data_access",
+      "name": "Data products and access",
+      "description": "Data release, PUFs, restrictions, documentation and timely dissemination",
+      "keywords": [
+        "public use",
+        "public-use",
+        "data release",
+        "data access",
+        "data availability",
+        "restricted data",
+        "data documentation",
+        "timely release",
+        "microdata",
+        "data file"
+      ]
+    },
+    {
+      "id": "respondent_burden",
+      "name": "Respondent burden and survey length",
+      "description": "Length, response burden, fatigue, and interview complexity",
+      "keywords": [
+        "respondent burden",
+        "response burden",
+        "questionnaire length",
+        "interview length",
+        "survey length",
+        "time burden",
+        "survey fatigue",
+        "participant burden",
+        "re:(?:survey|questionnaire|interview|form)s?\\s+(?:is|are|was|were|would\\s+be|being)?\\s*(?:far\\s+|much\\s+|way\\s+)?too\\s+long|too\\s+long\\s+to\\s+(?:complete|answer|fill)"
+      ]
+    },
+    {
+      "id": "mode_operations",
+      "name": "Survey administration and mode",
+      "description": "Collection modes, interviewer training, procedures and operations",
+      "keywords": [
+        "data collection mode",
+        "interviewer",
+        "phone survey",
+        "telephone interview",
+        "in-person",
+        "web survey",
+        "mixed-mode",
+        "mode effects",
+        "interview protocol",
+        "survey administration"
+      ]
+    },
+    {
+      "id": "demographics_equity",
+      "name": "Demographic measures and equity",
+      "description": "Age, race/ethnicity, socioeconomic groups, sex/gender, population subgroup representation",
+      "keywords": [
+        "race",
+        "ethnicity",
+        "hispanic",
+        "gender",
+        "sexual orientation",
+        "income",
+        "education",
+        "older adults",
+        "health equity",
+        "disparities",
+        "subpopulation",
+        "subgroup"
+      ]
+    },
+    {
+      "id": "child_health",
+      "name": "Children and adolescent health",
+      "description": "Sample Child components, youth measures and pediatric topics",
+      "keywords": [
+        "child health",
+        "children",
+        "adolescent",
+        "teen",
+        "pediatric",
+        "sample child",
+        "child questionnaire",
+        "childhood"
+      ]
+    },
+    {
+      "id": "question_testing",
+      "name": "Question testing and validity",
+      "description": "Cognitive testing, item validity, measurement and instrument evaluation",
+      "keywords": [
+        "cognitive testing",
+        "cognitive interview",
+        "validation",
+        "measurement error",
+        "question testing",
+        "pilot study",
+        "pilot test",
+        "psychometric",
+        "reliability testing",
+        "re:validated\\s+(?:[\\w-]+\\s+){0,3}(?:measures?|modules?|questions?|items?|instruments?|scales?|tools?)\\b"
+      ]
+    },
+    {
+      "id": "data_quality",
+      "name": "Data quality and missingness",
+      "description": "Nonresponse, missing data, quality control and measurement integrity",
+      "keywords": [
+        "data quality",
+        "nonresponse",
+        "non-response",
+        "missing data",
+        "missingness",
+        "item nonresponse",
+        "bias",
+        "quality assurance",
+        "quality control"
+      ],
+      "keywords_case_sensitive": [
+        "QC"
+      ]
+    },
+    {
+      "id": "policy_use",
+      "name": "Policy and research use",
+      "description": "Use of survey data for research, monitoring, program evaluation and policy",
+      "keywords": [
+        "policy",
+        "research",
+        "public health surveillance",
+        "monitoring",
+        "program evaluation",
+        "evidence base",
+        "resource allocation",
+        "decision making",
+        "policies",
+        "policymakers",
+        "policy makers"
+      ]
+    },
+    {
+      "id": "transition_implementation",
+      "name": "Redesign implementation and transition",
+      "description": "Timing and plans for transition to a changed NHIS instrument",
+      "keywords": [
+        "rollout",
+        "stakeholder",
+        "consultation",
+        "phased approach",
+        "timeline",
+        "effective date",
+        "bridge study",
+        "bridging study",
+        "split-sample",
+        "split sample",
+        "parallel testing",
+        "phase in",
+        "phased implementation",
+        "delay implementation",
+        "delay the redesign",
+        "postpone the redesign",
+        "pause the redesign",
+        "re:(?:2028|redesign(?:ed)?|survey|mode|modes|data\\s+collection|nhis|questionnaire)\\W+(?:\\w+\\W+){0,4}transition\\b",
+        "re:\\btransition\\W+(?:\\w+\\W+){0,10}(?:mixed-mode|sequential|online|web|self-administered|paper|redesign|2028|new\\s+(?:survey|questionnaire|design|instrument))",
+        "re:(?:before|prior\\s+to|during|after|delay(?:ing)?|phased|full)\\s+(?:the\\s+)?implementation|implementation\\s+(?:of\\s+)?(?:the\\s+)?(?:redesign|new\\s+(?:survey|design|questionnaire)|2028|changes|revised|proposed)"
+      ],
+      "exclude": [
+        "re:transition(?:s|ing|ed)?\\s+(?:in)?to\\s+adult(?:hood)?",
+        "re:transition\\s+from\\s+(?:pediatric|k\\W?12|school|high\\s+school)"
+      ]
+    },
+    {
+      "id": "me_cfs",
+      "name": "ME/CFS and myalgic encephalomyelitis",
+      "description": "ME/CFS diagnoses, symptoms, and retained NHIS tracking",
+      "keywords": [
+        "me/cfs",
+        "myalgic encephalomyelitis",
+        "chronic fatigue syndrome",
+        "myalgic encephalitis",
+        "cfs/me",
+        "mecfs",
+        "re:\\bME\\s*/\\s*CFS\\b"
+      ]
+    },
+    {
+      "id": "long_covid",
+      "name": "Long COVID and post-COVID conditions",
+      "description": "Long COVID prevalence, symptoms and questions",
+      "keywords": [
+        "long covid",
+        "long-covid",
+        "post covid",
+        "post-covid",
+        "post acute sequelae",
+        "post-acute sequelae"
+      ],
+      "keywords_case_sensitive": [
+        "PASC"
+      ]
+    },
+    {
+      "id": "post_exertional_malaise",
+      "name": "Post-exertional malaise (PEM)",
+      "description": "Exertion-triggered illness and PEM-specific items",
+      "keywords": [
+        "post-exertional malaise",
+        "post exertional malaise",
+        "symptom crash",
+        "crash after exertion",
+        "exertional intolerance"
+      ],
+      "keywords_case_sensitive": [
+        "PEM"
+      ]
+    },
+    {
+      "id": "fatigue_measurement",
+      "name": "Fatigue and energy measures",
+      "description": "Loss or retention of questions about fatigue",
+      "keywords": [
+        "fatigue",
+        "exhaustion",
+        "energy level",
+        "chronic tiredness",
+        "tiredness"
+      ],
+      "exclude": [
+        "re:chronic\\s+fatigue(?:\\s+immune\\s+dysfunction)?\\s+syndrome"
+      ]
+    },
+    {
+      "id": "idd",
+      "name": "Intellectual/developmental disability",
+      "description": "IDD prevalence, autism, developmental disability",
+      "keywords": [
+        "intellectual disability",
+        "intellectual disabilities",
+        "autism",
+        "autistic",
+        "down syndrome",
+        "cerebral palsy",
+        "developmental disability",
+        "developmental disabilities"
+      ],
+      "keywords_case_sensitive": [
+        "IDD",
+        "I/DD"
+      ]
+    },
+    {
+      "id": "disability_questions_removed",
+      "name": "Retaining disability questions",
+      "description": "Proposals to eliminate or preserve disability questions",
+      "keywords": [
+        "remove disability",
+        "disability questions",
+        "disability-related questions",
+        "disability metrics",
+        "disability measures",
+        "functional limitations",
+        "disability tracking",
+        "disabilities would be removed"
+      ]
+    },
+    {
+      "id": "mental_health_detail",
+      "name": "Mental health questions",
+      "description": "Retention or redesign of depression, anxiety, mental health measures",
+      "keywords": [
+        "mental health",
+        "anxiety",
+        "depression",
+        "suicide",
+        "psychological distress",
+        "non-pharmaceutical mental health"
+      ]
+    },
+    {
+      "id": "cannabis",
+      "name": "Cannabis, marijuana and CBD",
+      "description": "Cannabis, hemp and marijuana questionnaire items",
+      "keywords": [
+        "cannabis",
+        "marijuana",
+        "marihuana",
+        "hemp"
+      ],
+      "keywords_case_sensitive": [
+        "CBD",
+        "THC"
+      ]
+    },
+    {
+      "id": "covid_infectious",
+      "name": "COVID and infectious disease measures",
+      "description": "COVID and other infectious disease data needs",
+      "keywords": [
+        "covid",
+        "sars-cov",
+        "infectious disease",
+        "infection surveillance"
+      ],
+      "exclude": [
+        "re:(?:long|post)[\\s-]*covid"
+      ]
+    },
+    {
+      "id": "accommodation_access",
+      "name": "Accessible survey participation",
+      "description": "Response accommodations, modes and accessibility for disabled respondents",
+      "keywords": [
+        "reasonable accommodation",
+        "accommodations",
+        "communication barriers",
+        "accessible survey",
+        "participation barrier",
+        "accessibility",
+        "disability accessibility"
+      ]
+    },
+    {
+      "id": "caregivers",
+      "name": "Caregivers and family burden",
+      "description": "Family and caregiving roles and data needs",
+      "keywords": [
+        "caregiver",
+        "caregiving",
+        "family care",
+        "unpaid care"
+      ],
+      "exclude": [
+        "re:(?:writing|speaking|commenting)\\s+as\\s+(?:a|the)\\s+(?:family\\s+)?caregiver(?:\\s+(?:for|of|to)\\s+(?:\\w+\\s+){0,6}\\w+)?|as\\s+(?:a|the)\\s+(?:family\\s+)?caregiver\\s+(?:for|of|to)\\s+(?:a|my|someone|someone\\s+living)\\b(?:\\s+\\w+){0,6}"
+      ]
+    },
+    {
+      "id": "pain_symptoms",
+      "name": "Pain and symptom monitoring",
+      "description": "Chronic pain and specific symptom measures",
+      "keywords": [
+        "chronic pain",
+        "pain severity",
+        "widespread pain",
+        "symptom burden"
+      ]
+    },
+    {
+      "id": "disability_programs",
+      "name": "Disability services and ADA monitoring",
+      "description": "Use of survey data for programs, ADA and institutions",
+      "keywords": [
+        "institutionalization",
+        "disability services",
+        "disability benefit",
+        "independent living",
+        "community integration"
+      ],
+      "keywords_case_sensitive": [
+        "ADA"
+      ]
+    },
+    {
+      "id": "survey_removal_general",
+      "name": "Concerns about removed measures",
+      "description": "Other explicit references to removal or retention of questions",
+      "keywords": [
+        "remove questions",
+        "removing questions",
+        "questions removed",
+        "eliminate questions",
+        "cutting questions",
+        "retain questions",
+        "keep questions",
+        "lost measures",
+        "questions would be removed"
+      ]
+    }
+  ],
+  "global_exclusions": [
+    "re:some\\s+questions\\s+(?:about|on)\\s+disability,?\\s+mental\\s+health,?\\s+and\\s+chronic\\s+conditions\\s+would\\s+(?:remain|stay|continue|be\\s+retained|be\\s+kept)",
+    "re:\\[(?:share|insert|add|describe|tell|include|your|name|explain)[^\\]]{10,400}\\]",
+    "re:the\\s+2028\\s+draft\\s+(?:asks\\s+about|includes|covers|keeps|retains|asks\\s+questions\\s+about)\\s+other\\s+chronic\\s+conditions"
+  ]
+}
