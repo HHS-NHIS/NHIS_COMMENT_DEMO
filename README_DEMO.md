@@ -33,3 +33,9 @@ Independent analyst review, form-letter prevalence methodology, attachment extra
 - After independent coding: `python scripts/score_validation.py coded_results.csv --key PRIVATE_SCORING_KEY.csv --out validation_scores.csv`. Eight responses per positive/negative stratum are only a pilot, not publication-grade precision/recall; sparse themes are particularly uncertain.
 - `python scripts/build_public_snapshot.py --source data/comments.sqlite3 --output-dir /path/to/new_public_build` copies the database, removes internal working data, and creates compressed `sqlite.part*` chunks without modifying the master. **Never put the private scoring key in GitHub or the public site.**
 - The full 1,693-comment dataset has **provisional** AI labels and requires adjudication by analysts before being presented as validated frequency estimates. Public hosting approval is also unresolved.
+
+## Form-letter subject summaries (V9.7)
+
+**Corpus QC → Possible form-letter groups** now lists **all 29 groups**, with a short **provisional subject** and a one-sentence **main request** for each cluster observed in the saved snapshot. These are editorial descriptions grounded in the cluster's representative comment, **not AI theme classifications or human-validated coding**. Follow the example comment IDs to read the original argument. New or substantially changed groups without a reviewed description show **Subject not yet reviewed**.
+
+The **Data & exports** panel supplies the same subject fields in both **Form-letter clusters (summary)** (`template_groups`) and **Comment × form-letter cluster** (`clusters`) CSVs, including cluster membership, source anchor ID, and review status. Singleton comments remain in the per-comment export and are labeled **Not a form-letter group**. Update `form_letter_subjects.json` when reviewing or adding descriptions; cluster memberships are not changed by these labels.

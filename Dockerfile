@@ -5,6 +5,7 @@ RUN useradd --system --uid 10001 --no-create-home --shell /usr/sbin/nologin nhis
 COPY app/ ./app/
 COPY scripts/semantic_classify.py ./scripts/semantic_classify.py
 COPY themes.json ./themes.json
+COPY form_letter_subjects.json ./form_letter_subjects.json
 COPY data/ ./data/
 RUN python -c "import lzma,pathlib; d=pathlib.Path('data'); x=d/'comments.sqlite3.xz'; v=x.read_bytes() if x.exists() else b''.join(p.read_bytes() for p in sorted(d.glob('sqlite.part*'))); (d/'comments.sqlite3').write_bytes(lzma.decompress(v))" \
     && rm -f data/sqlite.part* data/comments.sqlite3.xz && chown -R nhisdemo:nhisdemo /app/data

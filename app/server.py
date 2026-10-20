@@ -26,7 +26,7 @@ from local_analysis import local_models, answer as local_answer, compare_theme
 from core import (connect as core_connect, import_data, metadata, theme_summary, all_themes, list_comments,
                   theme_details, save_override, response_review, export_report, DB_PATH,
                   source_status, sync_from_folder, analysis_qc, management_html, save_analyst_review,
-                  rebuild_derived, ensure_derived_current)
+                  rebuild_derived, ensure_derived_current, cluster_subjects)
 
 ASSETS=Path(__file__).resolve().parent
 MAX_BODY_BYTES=(80*1024 if os.getenv('NHIS_DEPLOYMENT_MODE','local').lower()=='hosted' else 75*1024*1024)
@@ -265,6 +265,10 @@ class Handler(BaseHTTPRequestHandler):
                     d['attachments']=[dict(r) for r in db.execute('SELECT * FROM attachments WHERE comment_id=?',(cid,))]
                     cl=db.execute('SELECT cluster_id,cluster_size,personalized,unfilled_placeholder,novel_words FROM comment_clusters WHERE comment_id=?',(cid,)).fetchone()
                     d['cluster']=dict(cl) if cl else None
+                    if d['cluster'] and d['cluster']['cluster_size']>1:
+                        d['cluster'].update(cluster_subjects(db).get(d['cluster']['cluster_id'], {
+                            'subject':'Subject not yet reviewed',
+                            'subject_summary':'Review representative comment before assigning a subject.'}))
                     d['attachment_text']=[dict(r) for r in db.execute('SELECT attachment_id,format,status,chars,method FROM attachment_text WHERE comment_id=?',(cid,))]
                     self._json(d)
             elif path=='/api/export':

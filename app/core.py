@@ -807,9 +807,39 @@ def date_summary(db):
     return [{"day":r["day"],"count":r["n"]} for r in rows]
 
 
+SUBJECT_LABELS_PATH = ROOT / "form_letter_subjects.json"
+
+
+def cluster_subjects(db, cm=None):
+    """Map current clusters to source-based editorial labels, without changing grouping.
+
+    Anchor labels to a member comment ID, rather than the mutable cluster representative,
+    so additions to the corpus do not silently drop an existing subject description.
+    New/unrecognized groups remain explicitly unlabeled until someone reviews them.
+    """
+    cm = cluster_map(db) if cm is None else cm
+    try:
+        catalog = json.loads(SUBJECT_LABELS_PATH.read_text(encoding="utf-8"))["labels"]
+    except FileNotFoundError:
+        catalog = {}
+    groups = {}
+    for anchor, label in sorted(catalog.items()):
+        member = cm.get(anchor)
+        if not member or member["cluster_size"] < 2:
+            continue
+        rep = member["cluster_id"]
+        groups.setdefault(rep, {
+            "subject": label["subject"], "subject_summary": label["summary"],
+            "subject_source_id": anchor,
+            "subject_status": "Provisional editorial summary; verify against source"
+        })
+    return groups
+
+
 def template_groups(db):
     """Form-letter clusters (near-duplicate text), largest first. Exploratory: not proof of coordination."""
     cm = cluster_map(db)
+    subjects = cluster_subjects(db, cm)
     members = {}
     for cid, v in sorted(cm.items()):
         members.setdefault(v["cluster_id"], []).append(v)
@@ -818,7 +848,12 @@ def template_groups(db):
         if len(vs) < 2:
             continue
         text = db.execute("SELECT plain_text FROM comments WHERE comment_id=?", (rep,)).fetchone()
+        label = subjects.get(rep, {})
         result.append({"cluster_id": rep, "size": len(vs),
+                       "subject": label.get("subject", "Subject not yet reviewed"),
+                       "subject_summary": label.get("subject_summary", "Review representative comment before assigning a subject."),
+                       "subject_source_id": label.get("subject_source_id", ""),
+                       "subject_status": label.get("subject_status", "Unreviewed"),
                        "example_comment_ids": [v["comment_id"] for v in vs[:5]],
                        "personalized": sum(v["personalized"] for v in vs),
                        "unfilled_placeholders": sum(v["unfilled_placeholder"] for v in vs),
@@ -851,7 +886,7 @@ def analysis_qc(db):
             "attachment_documents_with_extracted_text":m["attachment_documents_with_extracted_text"],
             "possible_truncation":m["possible_truncation"],
             "analyst_reviewed":m["analyst_reviewed"],"analyst_needs_followup":m["analyst_needs_followup"],
-            "shared_opening_groups":grps[:20],
+            "shared_opening_groups":grps,
             "review_queue":review_queue(db,30),
             "method_notes":["Public submissions received is not identical to public comments posted.",
                 "Form-letter clusters are near-duplicate text groups; they do not establish coordination, unique people, or redundancy for response purposes.",
@@ -1045,11 +1080,19 @@ def export_report(db, kind, draft="", theme=None, phrase=None, query_mode="any")
         headings=["comment_id","title","comment_url","priority","reasons","screened_theme_count","attachment_count","preview"]
         vals=review_queue(db,2000)
     elif kind=="template_groups":
-        headings=["cluster_id","size","personalized","unfilled_placeholders","shared_opening","example_comment_ids","method"]
+        headings=["cluster_id","subject","subject_summary","subject_source_id","subject_status","size","personalized","unfilled_placeholders","shared_opening","example_comment_ids","method"]
         vals=[{**g,"example_comment_ids":" | ".join(g["example_comment_ids"])} for g in template_groups(db)]
     elif kind=="clusters":
-        headings=["comment_id","cluster_id","cluster_size","overlap","novel_words","personalized","unfilled_placeholder"]
-        vals=[dict(r) for r in db.execute("SELECT * FROM comment_clusters ORDER BY cluster_size DESC, cluster_id, comment_id")]
+        headings=["comment_id","cluster_id","subject","subject_summary","subject_source_id","subject_status","cluster_size","overlap","novel_words","personalized","unfilled_placeholder"]
+        subjects = cluster_subjects(db)
+        vals=[]
+        for r in db.execute("SELECT * FROM comment_clusters ORDER BY cluster_size DESC, cluster_id, comment_id"):
+            label = subjects.get(r["cluster_id"], {})
+            single = r["cluster_size"] == 1
+            vals.append({**dict(r), "subject":label.get("subject", "Not a form-letter group" if single else "Subject not yet reviewed"),
+                         "subject_summary":label.get("subject_summary", "Unique text; no shared-letter subject" if single else "Review representative comment before assigning a subject."),
+                         "subject_source_id":label.get("subject_source_id", ""),
+                         "subject_status":label.get("subject_status", "Not applicable" if single else "Unreviewed")})
     elif kind=="same_submitter_duplicates":
         headings=["size","extra_records","comment_ids"]
         vals=[{**g,"comment_ids":" | ".join(g["comment_ids"])} for g in same_submitter_duplicates(db)]

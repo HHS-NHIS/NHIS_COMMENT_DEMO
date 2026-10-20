@@ -33,3 +33,9 @@ Independent analyst review, form-letter prevalence methodology, attachment extra
 - After independent coding: `python scripts/score_validation.py coded_results.csv --key PRIVATE_SCORING_KEY.csv --out validation_scores.csv`. Eight responses per positive/negative stratum are only a pilot, not publication-grade precision/recall; sparse themes are particularly uncertain.
 - `python scripts/build_public_snapshot.py --source data/comments.sqlite3 --output-dir /path/to/new_public_build` copies the database, removes internal working data, and creates compressed `sqlite.part*` chunks without modifying the master. **Never put the private scoring key in GitHub or the public site.**
 - The full 1,693-comment dataset has **provisional** AI labels and requires adjudication by analysts before being presented as validated frequency estimates. Public hosting approval is also unresolved.
+
+### Descriptive form-letter group labels
+
+The public **Corpus QC** display and cluster CSVs include provisional source-based **subject** and **main request** descriptions of the form letters. These editorial descriptions are distinct from the 30 AI screening themes and should be checked against the representative comments before final reporting. Edit `form_letter_subjects.json` to revise labels; no recoding or database migration is required.
+
+**V9.7:** All 29 form-letter groups now have editable provisional subject/summary descriptions in `form_letter_subjects.json`, shown under Corpus QC and the two cluster exports. The cluster calculation and AI labels were not changed.

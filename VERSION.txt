@@ -3,3 +3,5 @@ Version: V9.6 reproducibility and documentation QC — 2026-10-20
 Snapshot: 1,693 publicly indexed comment records; AI assignments provisional.
 No login, no runtime paid OpenAI calls.
 Existing AI classifications unchanged.
+
+V9.7: provisional source-based subject and request summaries for form-letter groups in Corpus QC, comment detail, and two CSV exports. No database or AI label changes.

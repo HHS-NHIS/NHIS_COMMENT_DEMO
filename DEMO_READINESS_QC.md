@@ -42,3 +42,12 @@ Verified three Claude-assisted image-derived attachment texts in the snapshot, c
 - Added controlled master-to-public snapshot exporter and a seven-step update guide. Public source still excludes the private validation key.
 - Added conservative template-decision migration and full-cluster reassembly on changed/new members. This is a code safeguard, not an assertion that all future refreshes are cost-free; changed shared text may require new model work.
 - Existing AI counts are unaffected by this release; no new comments were retrieved or classified.
+
+## V9.7 form-letter subject labeling (October 20, 2026)
+
+- Source-based, provisional editorial labels and one-sentence main-request descriptions were added for all **29** near-duplicate form-letter groups in this 1,693-record snapshot (1,333 clustered records).
+- The **Corpus QC → Possible form-letter groups** view now lists all 29 groups with labels, requests, representative excerpts, example comment IDs, and counts.
+- The **Data & exports → Form-letter clusters (summary)** CSV includes `subject`, `subject_summary`, `subject_source_id`, and `subject_status`; **Comment × form-letter cluster** CSV includes the same fields for each of 1,693 records (singletons explicitly marked not a form-letter group).
+- Individual comment detail pages show the group subject and description for clustered records.
+- Labels are editable through `form_letter_subjects.json`, separate from the immutable snapshot and 30 thematic categories; labels are not validated subject codes or evidence of organized campaigns.
+- Tests cover all 29 labels, the 993/236 leading groups, all 1,693 rows in the member export, database immutability, and hosted-mode API responses. No OpenAI requests or classification updates were made.
