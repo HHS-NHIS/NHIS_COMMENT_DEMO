@@ -12,6 +12,7 @@
 
 /* Explicit authorization for sending public excerpts or drafts to the paid API. */
 .consent-line{display:flex!important;flex-direction:row!important;align-items:start;gap:10px;font-size:12px;line-height:1.55;margin:12px 0;color:var(--ink);font-weight:500!important}
+body.hosted .consent-line{display:none!important}
 .consent-line input{width:17px;min-width:17px;height:17px;flex:none;margin:2px 0 0;accent-color:var(--teal)}
 
 /* V6 QC additions */

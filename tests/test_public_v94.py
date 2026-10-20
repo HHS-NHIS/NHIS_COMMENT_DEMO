@@ -78,6 +78,12 @@ class PublicDemoQCTest(unittest.TestCase):
         page=self.get('/')[1].decode()
         self.assertNotIn('Password-protected demo',page)
         self.assertNotIn('20 of 65 listed attachment',page)
+        js=self.get('/app.js')[1].decode(); css=self.get('/style.css')[1].decode()
+        for stale in ('inconsistent classifications','template-consistency QC','Historical AI labels','historical provisional AI labels'):
+            self.assertNotIn(stale,page+js,stale)
+        self.assertIn('body.hosted .consent-line{display:none!important}',css)
+        self.assertIn('Public read-only demo: evidence search only',js)
+        self.assertIn('AI-assisted transcription or description of 3 image-only documents',page)
         self.assertNotIn('All 60 attachment-bearing comments are presently awaiting updated AI coding',page)
         appjs=self.get('/app.js')[1].decode()
         self.assertIn('Public · Read-only · No API charges',appjs)

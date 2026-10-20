@@ -31,3 +31,7 @@
 - Fresh reconciliation of 1,693 publicly posted indexed records to the docket's submissions-received total.
 
 **Interpretation:** A functioning exploratory demo, not an official CDC finding or a certified statistical estimate.
+
+## V9.5 public wording / Claude Q C (2026-10-20)
+
+Verified three Claude-assisted image-derived attachment texts in the snapshot, corrected README and UI provenance wording, hid consent prompts in public evidence mode with CSS and JavaScript, removed outdated template-QC timeline language while retaining unvalidated-model warning, and updated fresh-clone test instructions. No AI labels or raw data were modified. Note: cluster labels still vary; the public AI-frequency chart remains withheld.

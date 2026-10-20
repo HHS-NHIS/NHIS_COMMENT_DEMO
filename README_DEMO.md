@@ -4,7 +4,7 @@ Publicly posted comment records from CDC-2026-1387, snapshot of 1,693 comments. 
 
 The shared demo is **public, no login required**, and **read-only**. It uses the saved public-comment database and provisional topic coding. No OpenAI API key is deployed, no cloud model calls are enabled, and visitors cannot upload drafts or edit the data.
 
-**Important limitations:** AI topic assignments remain unvalidated by independent analysts; repeated template/form-letter comments dominate record counts. The 65 attachment documents have undergone varying text-extraction methods including OCR/manual transcription; verify originals before quoting. Publicly posted comment records (1,693) are not the same as all received submissions (2,012 reported at prior docket snapshot).
+**Important limitations:** AI topic assignments remain unvalidated by independent analysts; repeated template/form-letter comments dominate record counts; some label variation remains even within major clusters. Text was extracted for 63 of 65 attachment documents using PDF/Word text extraction, OCR, and AI-assisted (Claude) transcription or description of 3 image-only documents; 2 photographs contain no text. Extracted text has not been verified against the originals; verify before quoting. Publicly posted comment records (1,693) are not the same as all received submissions (2,012 reported at prior docket snapshot).
 
 ## Local launch
 `python app/server.py`, then http://127.0.0.1:8765
@@ -14,11 +14,15 @@ Deploy this repo using Dockerfile. The database is distributed as `data/comments
 
 Security: management edits, draft uploads, paid model calls, and import endpoints are disabled in hosted mode. The public data can be downloaded by visitors; don't treat it as access-controlled.
 
-## Tests
-`python -m unittest discover -s tests` and `python scripts/verify_dashboard.py` (local source database included in downloadable ZIP; Railway image uses the compressed version).
+## Testing a fresh GitHub checkout
+The repository intentionally contains the database as compressed `data/sqlite.part*` segments, **not** a ready-to-open `data/comments.sqlite3`. From the repository root, reconstruct it first:
+
+```bash
+python -c "import lzma,pathlib; d=pathlib.Path('data'); (d/'comments.sqlite3').write_bytes(lzma.decompress(b''.join(p.read_bytes() for p in sorted(d.glob('sqlite.part*')))))"
+python -m unittest discover -s tests
+```
+
+Alternatively, the downloadable release ZIP already includes `data/comments.sqlite3` and the full regression suite; run the test-discovery command without reconstruction. The GitHub checkout contains only the public-route tests; the separate release ZIP contains additional core and integration tests.
 
 ## Deferred work
 Independent analyst review, form-letter prevalence methodology, attachment extraction verification, and governance approval for publication on third-party services. Hosting the public comments on Railway is not equivalent to any agency cloud authorization.
-
-## V9.4 public-display QC (2026-10-20)
-Removed stale claims of password protection and attachment/model-coding incompleteness, made comment-detail annotations view-only on the public site, and packaged a SQLite snapshot with journal state matching Railway. Automated tests cover the hosted endpoints, exports, immutable database, same-origin evidence query, and public mode. The snapshot remains provisional; no human validation or hosting authorization is implied.

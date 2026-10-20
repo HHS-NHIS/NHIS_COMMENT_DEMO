@@ -32,7 +32,7 @@ async function refresh(){try{[meta,{themes}]=await Promise.all([api('/api/meta')
   $('localRefreshModels').style.display='none';
   sections['local-ai']=['EVIDENCE SEARCH','Ask questions about source comments.','Evidence-only search, saved classifications and source-linked records. No paid API calls on this host.'];
   sections['imports']=['EXPORTS','Download verified source records.','Source metadata, evidence and QC reports; no hosted data editing.'];
-  document.querySelector('#tab-local-ai .panelhead p').textContent='Search the indexed public comments and inspect original source evidence. No paid API calls from the hosted demo.';
+  document.querySelector('#tab-local-ai .panelhead p').textContent='Search the indexed public comments and inspect original source evidence. No paid API calls from the hosted demo.';$('localModelStatus').className='banner info';$('localModelStatus').textContent='Public read-only demo: evidence search only. No paid OpenAI calls are made from this site.';
   document.querySelector('.top-state').textContent='Public · Read-only · No API charges';
   document.querySelector('.sidebar-note').textContent='Public exploratory prototype. All 1,693 records have provisional AI coding, including 60 with attachments. Independently verified theme accuracy and attachment completeness are not established.';
 }renderMeta();renderThemeRows();await sourceRefresh(); if(!$('tab-qc').classList.contains('hide'))await renderQc();}catch(e){msg('Cannot load local data: '+e.message,true);}}
@@ -69,10 +69,10 @@ async function renderQc(){try{const q=await api('/api/qc');
 async function refreshLocalModels(){
  const status=$('localModelStatus');try{
  const r=await api('/api/local/status');
- status.className='banner '+(r.connected?'info':'warning');
+ if(meta?.hosted_readonly||document.body.classList.contains('hosted')){status.className='banner info';status.textContent='Public read-only demo: evidence search only. No paid OpenAI calls are made from this site.';}else{status.className='banner '+(r.connected?'info':'warning');
  status.textContent=r.connected
   ? `OpenAI API key configured (not yet tested). App estimate today: $${Number(r.estimated_spend_today_usd).toFixed(4)} across ${r.requests_today} calls. Local daily spending guard: $${Number(r.daily_budget_usd).toFixed(2)}. Actual provider charges may differ.`
-  : (meta?.hosted_readonly?'Shared management demo: evidence-only. Paid OpenAI and draft uploads are disabled on this host.':'OPENAI_API_KEY is not configured locally. Evidence-only search is available.');
+  : (meta?.hosted_readonly?'Shared management demo: evidence-only. Paid OpenAI and draft uploads are disabled on this host.':'OPENAI_API_KEY is not configured locally. Evidence-only search is available.');}
  for(const id of ['localModel','localReviewModel']){
   const sel=$(id),old=sel.value;sel.innerHTML='<option value="">'+(id==='localModel'?'Evidence only — no API call':'Choose paid API model')+'</option>'+r.models.map(m=>`<option value="${esc(m)}">${esc(r.model_info?.[m]?.label||m)}</option>`).join('');sel.value=r.models.includes(old)?old:'';
  }
@@ -107,7 +107,7 @@ async function refreshSemantic(){
  try{
   const d=await api('/api/semantic/status');
   st.innerHTML=[metric('AI-coded comment records',number(d.coded)+' / '+number(d.corpus)),metric('Comments pending AI coding',number(d.uncoded_attachment)),metric('AI coded without attachments',number(d.coded_without_attachments)),metric('AI records flagged for analyst review',number(d.need_review))].join('');
-  rows.innerHTML='<div class="banner warning"><strong>AI theme counts withheld:</strong> Nearly identical form letters received inconsistent classifications. Review the assignment evidence and review queue instead; counts are not suitable as theme prevalence estimates. Claude decisions are stored separately as provisional audits.</div>'; if(meta?.hosted_readonly){$('semanticCounts').disabled=true;$('semanticCounts').title='Unvalidated theme counts are withheld on shared demo';}
+  rows.innerHTML='<div class="banner warning"><strong>AI theme counts withheld:</strong> labels have not been independently human-validated. Review the assignment evidence and review queue instead; counts are not suitable as theme prevalence estimates. Claude decisions are stored separately as provisional audits.</div>'; if(meta?.hosted_readonly){$('semanticCounts').disabled=true;$('semanticCounts').title='Unvalidated theme counts are withheld on shared demo';}
  }catch(e){st.textContent='Semantic status not available: '+e.message;}
 }
 function init(){document.addEventListener('click',delegate);document.querySelectorAll('.nav').forEach(el=>el.addEventListener('click',()=>showTab(el.dataset.tab)));
