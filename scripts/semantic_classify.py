@@ -644,6 +644,18 @@ def main(argv=None):
     p.add_argument('--reassemble-only', action='store_true', help='re-assemble from cached results and export; no API calls (free)')
     p.add_argument('--apply-template-review', metavar='CSV', help='load reviewed template decisions; then re-run --recode-all (re-assembly is free)')
     a = p.parse_args(argv)
+    # Never mutate or recode a redistributed demo/public snapshot. True master lives elsewhere.
+    # Inspect without creating WAL files; abort before core.connect() can mutate the database.
+    import sqlite3
+    check = Path(a.db).resolve()
+    if not check.is_file():
+        p.error('Database not found: '+str(check))
+    with closing(sqlite3.connect(check.as_uri()+'?mode=ro', uri=True)) as guard:
+        present = {x[0] for x in guard.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        if 'meta' in present:
+            flags = {k:v for k,v in guard.execute("SELECT key,val FROM meta WHERE key IN ('public_snapshot_note','v10_local_preview_label_baseline')")}
+            if flags:
+                p.error('Refusing to code or reassemble from PUBLIC or V10 PREVIEW database; use the verified private master and separate review decision source.')
     if not 1 <= a.batch_size <= 6:
         p.error('batch-size must be from 1 to 6')
     if a.model not in MODELS:

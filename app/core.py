@@ -595,7 +595,8 @@ def metadata(db):
     att_count = db.execute("SELECT COUNT(*) FROM attachments").fetchone()[0]
     att_docs = db.execute("SELECT COUNT(*) FROM (SELECT DISTINCT comment_id, COALESCE(NULLIF(attachment_id,''), download_url) FROM attachments)").fetchone()[0]
     with_attachments = db.execute("SELECT COUNT(*) FROM comments WHERE CAST(attachment_count AS INTEGER)>0 OR comment_id IN (SELECT comment_id FROM attachments)").fetchone()[0]
-    att_text_ok = db.execute("SELECT COUNT(*) FROM attachment_text WHERE status IN ('ok','no_text')").fetchone()[0]  # no_text = image reviewed, contains no text
+    att_text_ok = db.execute("SELECT COUNT(*) FROM attachment_text WHERE status='ok'").fetchone()[0]
+    att_no_text_reviewed = db.execute("SELECT COUNT(*) FROM attachment_text WHERE status='no_text'").fetchone()[0]
     attached_only = len(attachment_dependent_ids(db))
     unclassified = db.execute("SELECT COUNT(*) FROM comments c WHERE NOT EXISTS (SELECT 1 FROM tags t WHERE t.comment_id=c.comment_id) AND NOT EXISTS (SELECT 1 FROM manual_overrides o WHERE o.comment_id=c.comment_id AND o.decision=1)").fetchone()[0]
     reviews=db.execute("SELECT COUNT(*) FROM analyst_reviews WHERE review_status='Reviewed'").fetchone()[0]
@@ -607,6 +608,7 @@ def metadata(db):
     return {"records":records,"with_text":unique_with_text,"blank_text":records-unique_with_text,
        "attachment_metadata_rows":att_count,"attachment_documents":att_docs,
        "attachment_documents_with_extracted_text":att_text_ok,
+       "attachment_documents_reviewed_without_text":att_no_text_reviewed,
        "comment_records_with_declared_attachments":with_attachments,"attachment_only_placeholders":attached_only,
        "unclassified_keyword_records":unclassified,"exact_duplicate_groups":dupe_groups,
        "records_in_duplicate_groups":grouped_records,"indexed_count":indexed,

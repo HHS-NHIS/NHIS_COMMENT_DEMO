@@ -25,3 +25,54 @@ body.hosted #tab-review .panel,body.hosted #tab-imports .source-panel {opacity:.
 
 body.hosted .nav[data-tab="review"],body.hosted #goReview,body.hosted #tab-review,body.hosted #tab-imports .twocol article:first-child {display:none!important;}
 body.hosted #tab-imports .twocol {display:block;}
+
+/* Additive management preview: no changes to legacy tab styling. */
+#tab-management #mgNarrative{white-space:pre-wrap;color:var(--ink);font-size:13px;line-height:1.85}
+#tab-management #mgTopics h3{font-size:13px;margin:18px 0 7px}
+#tab-management #mgCitations .tag{cursor:pointer}
+#tab-management #mgCitations .tag:hover{background:var(--tealsoft)}
+#tab-management .checks.review{margin:14px 0}
+
+/* Private localhost read-only preview retains deterministic Response review, not API comparison.
+   The hosted/public security rules above remain unchanged. */
+body.hosted.private-preview .nav[data-tab="review"],body.hosted.private-preview #goReview{display:flex!important}
+body.hosted.private-preview #tab-review:not(.hide){display:block!important}
+body.hosted.private-preview #tab-review .panel{opacity:1}
+body.hosted.private-preview #reviewButton,body.hosted.private-preview #exportReview{display:inline-flex!important}
+body.hosted.private-preview #tab-review>article.panel{display:none!important}
+/* Small screens: do not let wide tables, filters or long source strings expand the grid. */
+@media (max-width:730px){
+ .shell{grid-template-columns:minmax(0,1fr)}
+ .main{min-width:0;max-width:100%;width:100%}
+ .topbar{min-width:0;height:auto;min-height:52px;flex-wrap:wrap;gap:5px;padding:7px 0}
+ .top-state{white-space:normal;text-align:right}
+ .head{min-width:0;flex-wrap:wrap}
+ .head>div{min-width:0;overflow-wrap:anywhere}
+ .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .panel,.tabpanel{min-width:0;max-width:100%}
+ .metric{min-width:0;overflow-wrap:anywhere}
+ .metric strong{overflow-wrap:anywhere;text-align:right}
+ .panelhead{flex-wrap:wrap}
+}
+
+/* V10.5 precomputed category-wide synthesis, accessible on narrow screens */
+.management-argument{border-top:1px solid var(--border,#ddd);padding:12px 0;overflow-wrap:anywhere;}
+.management-argument p{margin:6px 0 7px;line-height:1.5;}
+.management-argument .muted{display:inline-block;font-size:.83em;}
+.management-argument .tags{display:flex;flex-wrap:wrap;gap:6px;}
+#mgRepeatedGroups .metric{min-width:0;}
+#mgRepeatedGroups .metric span{min-width:0;overflow-wrap:anywhere;}
+
+/* V10.5.1 management coding-rule interpretation and explicit overlap */
+.management-rules{border:1px solid var(--border,#c5ced5);border-radius:10px;padding:12px 16px;margin:20px 0 12px;overflow-wrap:anywhere}
+.management-rules summary{cursor:pointer;font-weight:700;font-size:1rem;padding:5px 0}
+#mgRuleDescription{margin:9px 0;line-height:1.55}
+#mgOverlapExplanation{padding:10px 0;font-weight:600}
+.management-rule-row{display:grid;grid-template-columns:45px minmax(0,1fr) 125px;gap:10px;padding:8px 0;border-top:1px solid var(--border,#e4e6e9);align-items:start}
+.management-rule-row small{text-align:right;opacity:.75}
+@media(max-width:620px){.management-rule-row{grid-template-columns:40px minmax(0,1fr)}.management-rule-row small{grid-column:2;text-align:left}}
+
+.management-combo{background:var(--bg2,#f5f8fb);border:1px solid var(--border,#ccd5df);border-left:4px solid var(--accent,#2b6a89);border-radius:10px;padding:15px 16px;margin:10px 0 18px;overflow-wrap:anywhere}
+.management-combo h3{margin:0 0 10px;font-size:1.05rem}
+.management-combo p{line-height:1.55;margin:9px 0}
+.management-combo .tags{display:flex;gap:6px;flex-wrap:wrap}

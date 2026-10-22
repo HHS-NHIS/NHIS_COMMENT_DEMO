@@ -114,13 +114,34 @@ def _fts_term(words):
 # ------------------------------------------------------------------------------------------------
 # Search index
 # ------------------------------------------------------------------------------------------------
+def assert_search_index_complete(db):
+    '''Fail closed before serving an immutable snapshot with a missing/stale FTS corpus.''' 
+    if not db.execute("SELECT 1 FROM sqlite_master WHERE name='local_fts'").fetchone():
+        raise ValueError('Search index local_fts missing; rebuild an offline copy before serving')
+    n = db.execute('SELECT COUNT(*) FROM comments').fetchone()[0]
+    nf = db.execute('SELECT COUNT(*) FROM local_fts').fetchone()[0]
+    if nf != n:
+        raise ValueError(f'Stale search index: {nf} of {n} comments indexed')
+    missing = db.execute('''SELECT COUNT(*) FROM comments c WHERE NOT EXISTS
+                            (SELECT 1 FROM local_fts f WHERE f.comment_id=c.comment_id)''').fetchone()[0]
+    if missing:
+        raise ValueError(f'Search index missing {missing} real comment IDs')
+    orphans = db.execute('''SELECT COUNT(*) FROM local_fts f WHERE NOT EXISTS
+                            (SELECT 1 FROM comments c WHERE c.comment_id=f.comment_id)''').fetchone()[0]
+    if orphans:
+        raise ValueError(f'Search index contains {orphans} unknown IDs')
+    m = {k:v for k,v in db.execute("SELECT key,val FROM meta WHERE key IN ('source_csv_sha256','derivation_version','derived_at_utc','local_fts_sha256')")}
+    fingerprint = '|'.join((m.get('source_csv_sha256', ''),m.get('derivation_version', ''),m.get('derived_at_utc', '')))
+    if m.get('local_fts_sha256') != fingerprint:
+        raise ValueError('Search index fingerprint stale; rebuild an offline copy')
+    return n
+
+
 def ensure_search_index(db):
     """Build/rebuild FTS when the import fingerprint OR text derivation changes."""
     # Hosted snapshots are immutable; the FTS index ships prebuilt.
     if db.execute('PRAGMA query_only').fetchone()[0]:
-        if not db.execute("SELECT 1 FROM sqlite_master WHERE name='local_fts'").fetchone():
-            raise ValueError('Bundled search index is unavailable')
-        return
+        return assert_search_index_complete(db)
 
     try:
         db.execute('CREATE VIRTUAL TABLE IF NOT EXISTS local_fts USING fts5(comment_id UNINDEXED, title, organization, plain_text, tokenize="porter unicode61")')

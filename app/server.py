@@ -23,6 +23,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from local_analysis import local_models, answer as local_answer, compare_theme
+import management_addon as management  # additive, read-only reporting; no existing route overrides
 from core import (connect as core_connect, import_data, metadata, theme_summary, all_themes, list_comments,
                   theme_details, save_override, response_review, export_report, DB_PATH,
                   source_status, sync_from_folder, analysis_qc, management_html, save_analyst_review,
@@ -33,7 +34,11 @@ MAX_BODY_BYTES=(80*1024 if os.getenv('NHIS_DEPLOYMENT_MODE','local').lower()=='h
 HOSTED = os.getenv('NHIS_DEPLOYMENT_MODE','local').strip().lower() == 'hosted'
 PUBLIC_DEMO = HOSTED and os.getenv('NHIS_PUBLIC_DEMO','0').strip() == '1'
 READ_ONLY = HOSTED or os.getenv('NHIS_READ_ONLY','0') == '1'
-HOSTED_ALLOWED_POSTS = {'/api/local/query'}  # Evidence-only, no uploaded drafts or paid calls on shared host.
+HOSTED_ALLOWED_POSTS = {'/api/local/query'}  # Original hosted evidence-only allowlist; unchanged.
+# Private local read-only preview allows only deterministic draft keyword checks/CSV.
+# These functions read the SQLite snapshot and NEVER save draft text or write data.
+PRIVATE_PREVIEW = not HOSTED and READ_ONLY and os.getenv('NHIS_MANAGEMENT_PREVIEW','0') == '1'
+READ_ONLY_ALLOWED_POSTS = HOSTED_ALLOWED_POSTS | ({'/api/review','/api/export_review'} if PRIVATE_PREVIEW else set())
 HOSTED_ORIGIN=os.getenv('NHIS_PUBLIC_ORIGIN','').strip().rstrip('/').lower()
 _LOGIN_LOCK=threading.Lock()
 _LOGIN_FAILURES={}
@@ -45,7 +50,7 @@ LOGIN_MAX_FAILURES=15
 LOGIN_WINDOW_SECONDS=60
 
 def connect():
-    if not HOSTED:
+    if not READ_ONLY:
         return core_connect()
     # Immutable read-only snapshot: SQLite takes no locks and creates no -wal/-shm files, so the shared
     # demo cannot stall on file locking (seen on Windows with a WAL-mode file) or modify the snapshot.
@@ -243,12 +248,59 @@ class Handler(BaseHTTPRequestHandler):
             elif path=='/api/source':
                 self._json({'path':'Read-only hosted demo','available':False,'files':{}} if HOSTED else source_status())
             elif path=='/api/meta':
-                with closing(connect()) as db:self._json({**metadata(db),'llm_enabled':(not HOSTED and bool(os.environ.get('OPENAI_API_KEY','').strip())),'hosted_readonly':READ_ONLY})
+                with closing(connect()) as db:self._json({**metadata(db),'llm_enabled':(not HOSTED and bool(os.environ.get('OPENAI_API_KEY','').strip())),'hosted_readonly':READ_ONLY,'private_preview':PRIVATE_PREVIEW})
             elif path=='/api/qc':
                 with closing(connect()) as db:self._json(analysis_qc(db))
             elif path=='/api/management_brief':
                 with closing(connect()) as db:report=management_html(db)
                 self._response(report,ctype='text/html; charset=utf-8',extra={'Content-Disposition':'attachment; filename=nhis_internal_qc_brief.html'})
+            elif path=='/api/management':
+                with closing(connect()) as db:
+                    state=management.load(db)
+                    state.pop('assignments',None)  # never transfer all assignment records on overview
+                    self._json(state)
+            elif path=='/api/management/comments':
+                with closing(connect()) as db:
+                    state=management.load(db)
+                    self._json(management.page(db,state,q.get('section','summary'),q.get('theme',''),
+                              q.get('q',''),q.get('page','1'),q.get('size','20'),q.get('questionnaire','')))
+            elif path=='/api/management/export':
+                with closing(connect()) as db:
+                    content=management.csv_export(db,management.load(db),q.get('section',''),q.get('theme',''),q.get('q',''),q.get('questionnaire',''))
+                self._response(content,ctype='text/csv; charset=utf-8',
+                    extra={'Content-Disposition':'attachment; filename="nhis_management_multilabel.csv"'})
+            elif path=='/api/management/topic-export':
+                with closing(connect()) as db: state=management.load(db)
+                if not state['ready']:self._json({'error':'Topic summary CSV not available'},409);return
+                self._response(management.COMBO_CSV.read_bytes(),ctype='text/csv; charset=utf-8',
+                    extra={'Content-Disposition':'attachment; filename="NHIS_MGMT_BY_AI_THEME_OFFLINE_COMPILED.csv"'})
+            elif path=='/api/management/topic-report':
+                with closing(connect()) as db: state=management.load(db)
+                if not state['ready']:self._json({'error':'Topic summary Word appendix not available'},409);return
+                self._response(management.COMBO_REPORT.read_bytes(),
+                    ctype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    extra={'Content-Disposition':'attachment; filename="NHIS_MGMT_BY_AI_THEME_OFFLINE_COMPILED.docx"'})
+            elif path=='/api/management/coded-export':
+                # Complete, precomputed comment-level CSV: legacy themes + all management
+                # codes and QC flags. Never use the local/private master DB.
+                with closing(connect()) as db: state=management.load(db)
+                if not state['ready']:
+                    self._json({'error':'Management coded export unavailable before review gate'},409);return
+                csvpath=ASSETS.parent/'qc_exports'/'NHIS_3748_V10_4_ADJUDICATED.csv'
+                if not csvpath.is_file():
+                    self._json({'error':'Full coded CSV missing'},409);return
+                self._response(csvpath.read_bytes(),ctype='text/csv; charset=utf-8',
+                    extra={'Content-Disposition':'attachment; filename="NHIS_3748_FULL_CODED_AI_THEMES_MANAGEMENT_QC.csv"'})
+            elif path=='/api/management/report':
+                import hashlib
+                with closing(connect()) as db: state=management.load(db)
+                if not state['ready']:self._json({'error':'Reviewed management report not yet available'},409);return
+                expected=json.loads(management.ARTIFACT.read_text(encoding='utf-8')).get('report_sha256','')
+                if not management.REPORT.is_file() or not expected or hashlib.sha256(management.REPORT.read_bytes()).hexdigest()!=expected:
+                    self._json({'error':'Precomputed management report missing or does not match reviewed artifact'},409);return
+                self._response(management.REPORT.read_bytes(),
+                  ctype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                  extra={'Content-Disposition':'attachment; filename="nhis_management_classification_report.docx"'})
             elif path=='/api/themes':
                 with closing(connect()) as db:self._json({'themes':theme_summary(db),'method':'Unvalidated keyword-screening tags; review before management use.'})
             elif path=='/api/comments':
@@ -289,15 +341,15 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self._authorized(): return
         path=urlsplit(self.path).path
-        if READ_ONLY and path not in HOSTED_ALLOWED_POSTS:
-            self._json({'error':'This shared demo is read-only. Use your local copy for data edits.'},403)
+        if READ_ONLY and path not in READ_ONLY_ALLOWED_POSTS:
+            self._json({'error':'This dashboard is read-only. Database edits are disabled.'},403)
             return
         try:
             self._check_local_origin()
             payload=self._body()
             if path=='/api/local/query':
                 if not isinstance(payload,dict):raise ValueError('Expected JSON object')
-                if HOSTED and (payload.get('model') or payload.get('approved')):raise ValueError('Hosted demo supports evidence-only queries; paid model calls are disabled')
+                if READ_ONLY and (payload.get('model') or payload.get('approved')):raise ValueError('Hosted demo supports evidence-only queries; paid model calls are disabled')
                 with closing(connect()) as db:result=local_answer(db,str(payload.get('question','')),str(payload.get('theme_id','')),str(payload.get('model','')),approved=payload.get('approved') is True)
                 self._json(result)
             elif path=='/api/local/compare':
@@ -368,7 +420,7 @@ def main():
     p.add_argument('--status',help='export_status.json path')
     p.add_argument('--rebuild',action='store_true',help='Re-derive cleaned text, theme tags and form-letter clusters from stored raw text, then exit')
     args=p.parse_args()
-    if HOSTED and (args.rebuild or args.sync or args.import_csv):
+    if READ_ONLY and (args.rebuild or args.sync or args.import_csv):
         raise SystemExit('Hosted snapshot is read-only: import/rebuild disabled')
     if args.rebuild:
         backup_database()
@@ -386,12 +438,16 @@ def main():
         with closing(connect()) as db:
             print(json.dumps(import_data(db,read(args.import_csv),read(args.attachments),read(args.index),read(args.status)),indent=2))
         return
-    if HOSTED:
+    if READ_ONLY:
         problem=hosted_snapshot_problem()
-        if problem:raise SystemExit('Hosted snapshot not ready: '+problem)
+        if problem:raise SystemExit('Read-only snapshot not ready: '+problem)
     with closing(connect()) as db:
-        rebuilt=None if HOSTED else ensure_derived_current(db)
+        rebuilt=None if READ_ONLY else ensure_derived_current(db)
         if rebuilt:print('Derived fields rebuilt for new cleaning/taxonomy version:',rebuilt)
+        # Run before binding the listener: immutable hosted/local preview cannot repair stale FTS.
+        from local_analysis import ensure_search_index, assert_search_index_complete
+        if READ_ONLY: assert_search_index_complete(db)
+        else: ensure_search_index(db)
         print('Local database:',DB_PATH,'records:',metadata(db)['records'])
     if HOSTED and not PUBLIC_DEMO and (not os.environ.get('DEMO_USER') or len(os.environ.get('DEMO_PASSWORD',''))<16):
         raise SystemExit('Hosted mode requires DEMO_USER and a DEMO_PASSWORD of at least 16 characters')
