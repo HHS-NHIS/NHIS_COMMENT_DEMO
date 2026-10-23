@@ -64,6 +64,14 @@ class CorpusTests(unittest.TestCase):
         cls.db=sqlite3.connect("file:"+str((ROOT/"data/comments.sqlite3").resolve())+"?mode=ro&immutable=1",uri=True)
         cls.db.row_factory=sqlite3.Row
         cls.idx=v.index(cls.db)
+        for suffix in ("0414","0428","0518","0004","0261"):
+            cid="CDC-2026-1387-"+suffix
+            body=cls.idx["rows"][cid]["plain_text"] or ""
+            low=body.lower()
+            target=next((i for term in ("whole person","wphi","hemp","cbd","remov") if (i:=low.find(term))>=0),0)
+            snippet=" ".join(body[max(0,target-100):target+520].split())
+            print("V107 SOURCE QC",suffix,"status",cls.idx["items"][cid]["support_specific_measure"],
+                "subcats",cls.idx["items"][cid]["content_subcategories"],"excerpt",repr(snippet),flush=True)
 
     @classmethod
     def tearDownClass(cls):
