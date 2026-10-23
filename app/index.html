@@ -12,11 +12,26 @@
 <button class="nav" data-tab="qc"><span>◎</span> Corpus QC</button>
 <button class="nav" data-tab="imports"><span>⇪</span> Data & exports</button>
 <button class="nav" data-tab="management"><span>▦</span> Management synthesis</button>
+<button class="nav" data-tab="feedback"><span>☰</span> Form-Letter Analysis</button>
 </nav><div class="sidebar-note">Preliminary management demo. Counts refer to comment records, not unique people. AI themes and category labels require analyst review; four reviewed attachments contain no written text.</div></aside>
 <main class="main"><div class="topbar"><div class="breadcrumbs">Public comment analysis <span>/</span> 2028 NHIS redesign</div><div class="top-state"><span class="dot"></span> Public evidence demo · Read-only</div></div>
 <header class="head"><div><div class="eyebrow" id="sectionEyebrow">CORPUS OVERVIEW</div><h1 id="sectionTitle">What are commenters saying?</h1><p class="lede" id="sectionDesc">A traceable view of public comments, supporting evidence, and response-review coverage.</p></div><button class="button ghost" id="importShortcut">Import comments <span>↗</span></button></header>
 <div id="message" class="message hide" role="status"></div>
 <div id="statusBanner" class="banner warning">Preliminary source data loading…</div>
+<article class="panel" id="v107GlobalPanel" aria-label="V10.7 shared feedback filters">
+<div class="panelhead"><div><h2>V10.7 · Shared feedback filters</h2><p>Applies to search, comment exploration, management results, topic breakdowns and filtered CSV exports. Does not change the 3,748 public submissions or legacy saved narratives.</p></div></div>
+<div class="formrow">
+<label><span>Form-letter mode</span><select id="v107Mode">
+<option value="all">All comments (3,748 submissions)</option>
+<option value="representative">Representative per cluster</option>
+<option value="exclude_clusters">Exclude identified form-letter clusters</option>
+</select></label>
+<label><span>Additional topic</span><select id="v107Topic"><option value="">All additional topics</option></select></label>
+<label><span>Topic importance</span><select id="v107Tier"><option value="any">Primary and secondary</option><option value="primary">Primary substantive topics</option><option value="secondary">Secondary / incidental mentions</option></select></label>
+<label><span>Management Content subcategory</span><select id="v107Content"><option value="">All Content subcategories</option></select></label>
+</div>
+<p class="footnote" id="v107FilterStatus">The default all-comments view preserves submission volume. Representative and exclude modes are exploratory screens for argument diversity, not a count of distinct people.</p>
+</article>
 <section id="tab-overview" class="tabpanel">
 <div class="kpis"><div class="kpi"><div class="klabel">COMMENT RECORDS</div><div class="knum" id="kRecords">—</div><div class="ksub">Not unique people</div></div><div class="kpi"><div class="klabel">COMMENTS WITH TEXT</div><div class="knum" id="kText">—</div><div class="ksub">Attachment text incorporated where available</div></div><div class="kpi"><div class="klabel">SCREENING THEMES</div><div class="knum" id="kThemes">—</div><div class="ksub">Unvalidated screening taxonomy</div></div><div class="kpi"><div class="klabel">DISTINCT TEXTS</div><div class="knum" id="kDuplicate">—</div><div class="ksub" id="kDuplicateSub">Form-letter clusters counted once</div></div></div>
 <div class="twocol"><article class="panel"><div class="panelhead"><div><h2>Most frequently flagged themes</h2><p>Records flagged per theme (bar) and approximate text groups after grouping near-duplicate form letters (right). Overlapping assignments allowed.</p></div><button class="textbutton" id="allThemesBtn">Explore themes →</button></div><div id="overviewThemes" class="barlist"></div></article>
@@ -40,6 +55,15 @@
 </details><div id="mgCitations" class="tags"></div><div id="mgCompiledArguments"></div><div id="mgRepeatedGroups"></div><div id="mgTopics"></div></article>
 <article class="panel"><div class="panelhead"><div><h2>Matching comment records</h2><p>Open source-linked comments in the existing read-only comment-detail viewer. Each submission remains separately countable, including near-duplicate form letters.</p></div></div><div id="mgResults" class="commentgrid"></div><div id="mgPager" class="pager"></div></article>
 </section>
+<section id="tab-feedback" class="tabpanel hide">
+<article class="panel"><div class="panelhead"><div><h2>Form-Letter Analysis</h2><p>Exact text repetitions, approximate template clusters, personalized variants and potentially unique submissions. Provisional, auditable screen over the same frozen corpus; source comments remain available.</p></div><button class="button subtle" id="v107Export">Download filtered V10.7 classification CSV ↓</button></div>
+<div id="v107Stats" class="integrity"></div><div class="checks review" id="v107Explanation">Analyzing frozen source records…</div>
+<h3>Primary and secondary topical concerns in this view</h3><div class="footnote">Each comment can have multiple primary topics. Secondary mentions are tracked separately; totals may overlap.</div>
+<div id="v107Topics" class="management-rule-table"></div>
+<h3>Management Content subcategories (multi-label)</h3><div id="v107Contents" class="management-rule-table"></div>
+<h3>Most frequent repeated-submission clusters</h3><div id="v107Clusters" class="commentgrid"></div>
+<div class="footnote">Cluster representatives do not automatically preserve every personalized concern; review listed variants and original text. The preserved V10.6 compiled narratives cover their original full cohorts, NOT the selected filter.</div>
+</article></section>
 <section id="tab-local-ai" class="tabpanel hide">
 <article class="panel">
 <div class="panelhead"><div><h2>Ask about the public comments</h2><p>Local database counts and evidence search are free. This public demo searches saved source evidence without paid API calls. Paid model features are available only in a separate local analyst configuration.</p></div></div>
@@ -83,4 +107,5 @@
 <footer>NHIS Public Comment Intelligence · Management prototype · Method: source-grounded lexical retrieval; provisional AI labels require independent analyst validation · Preloaded data are preliminary. Complete relative to the saved October 21, 2026 public API inventory of 3,748 IDs; not a guarantee about subsequently posted comments. AI themes and management labels are not independently validated.</footer>
 </main></div>
 <dialog id="commentDialog"><div class="modalhead"><div><div class="eyebrow">SOURCE EVIDENCE</div><h2 id="detailTitle">Comment</h2></div><button id="closeDialog" class="button subtle" aria-label="Close">✕</button></div><div id="detailBody"></div></dialog>
-<script src="/app.js" defer></script></body></html>
+<script src="/app.js" defer></script>
+<script src="/v107.js" defer></script></body></html>
