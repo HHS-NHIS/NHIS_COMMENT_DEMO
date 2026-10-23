@@ -24,6 +24,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from local_analysis import local_models, answer as local_answer, compare_theme
 import management_addon as management  # additive, read-only reporting; no existing route overrides
+import v107_overlay as feedback  # V10.7 immutable feedback index
 from core import (connect as core_connect, import_data, metadata, theme_summary, all_themes, list_comments,
                   theme_details, save_override, response_review, export_report, DB_PATH,
                   source_status, sync_from_folder, analysis_qc, management_html, save_analyst_review,
@@ -82,6 +83,16 @@ def semantic_module():
     if scripts_dir not in sys.path:sys.path.insert(0,scripts_dir)
     import semantic_classify
     return semantic_classify
+
+def feedback_options(q, management_view=False):
+    return dict(mode=q.get('form_mode','all'), section=q.get('section','') if management_view else '',
+        legacy_theme=q.get('theme',''), topic=q.get('v107_topic',''),
+        tier=q.get('v107_tier','any'), subcategory=q.get('v107_content',''),
+        query=q.get('q',''), match=q.get('match','any'),
+        questionnaire=q.get('questionnaire',''))
+
+def feedback_requested(q):
+    return any(q.get(k) for k in ('form_mode','v107_topic','v107_tier','v107_content'))
 
 def sem_csv(db,kind):
     sql={
@@ -218,7 +229,18 @@ class Handler(BaseHTTPRequestHandler):
         try:
             path=urlsplit(self.path).path
             q=self._query()
-            if path=='/api/local/status':
+            if path=='/api/v107/qc':
+                with closing(connect()) as db:self._json(feedback.qc(db))
+            elif path=='/api/v107/stats':
+                with closing(connect()) as db:self._json(feedback.stats(db,**feedback_options(q,True)))
+            elif path=='/api/v107/comments':
+                with closing(connect()) as db:
+                    self._json(feedback.comments(db,**feedback_options(q,True),page=q.get('page',1),size=q.get('size',20)))
+            elif path=='/api/v107/export':
+                with closing(connect()) as db:content=feedback.export(db,**feedback_options(q,True))
+                self._response(content,ctype='text/csv; charset=utf-8',
+                    extra={'Content-Disposition':'attachment; filename="NHIS_V107_FILTERED_FEEDBACK_SCREEN.csv"'})
+            elif path=='/api/local/status':
                 self._json({'connected':False,'models':[],'model_info':{},'hosted_evidence_only':True,'estimated_spend_today_usd':0,'requests_today':0,'daily_budget_usd':0} if HOSTED else local_models())
             elif path=='/api/semantic/status':
                 with closing(connect()) as db:
@@ -262,11 +284,14 @@ class Handler(BaseHTTPRequestHandler):
             elif path=='/api/management/comments':
                 with closing(connect()) as db:
                     state=management.load(db)
-                    self._json(management.page(db,state,q.get('section','summary'),q.get('theme',''),
+                    self._json(feedback.comments(db,**feedback_options(q,True),page=q.get('page',1),size=q.get('size',20))
+                        if feedback_requested(q) else
+                        management.page(db,state,q.get('section','summary'),q.get('theme',''),
                               q.get('q',''),q.get('page','1'),q.get('size','20'),q.get('questionnaire','')))
             elif path=='/api/management/export':
                 with closing(connect()) as db:
-                    content=management.csv_export(db,management.load(db),q.get('section',''),q.get('theme',''),q.get('q',''),q.get('questionnaire',''))
+                    content=(feedback.export(db,**feedback_options(q,True)) if feedback_requested(q) else
+                             management.csv_export(db,management.load(db),q.get('section',''),q.get('theme',''),q.get('q',''),q.get('questionnaire','')))
                 self._response(content,ctype='text/csv; charset=utf-8',
                     extra={'Content-Disposition':'attachment; filename="nhis_management_multilabel.csv"'})
             elif path=='/api/management/topic-export':
@@ -302,9 +327,22 @@ class Handler(BaseHTTPRequestHandler):
                   ctype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                   extra={'Content-Disposition':'attachment; filename="nhis_management_classification_report.docx"'})
             elif path=='/api/themes':
-                with closing(connect()) as db:self._json({'themes':theme_summary(db),'method':'Unvalidated keyword-screening tags; review before management use.'})
+                with closing(connect()) as db:
+                    if feedback_requested(q):
+                        base=theme_summary(db)
+                        idx,ids,_=feedback.filter_result(db,**feedback_options(q,False))
+                        selections=set(ids)
+                        for t in base:
+                            t['unfiltered_count']=t['count']
+                            t['count']=len(idx['themes'].get(t['id'],set()) & selections)
+                        base.sort(key=lambda x:(-x['count'],x['name']))
+                        self._json({'themes':base,'method':'V10.7 filtered displayed-unit counts; legacy counts retained in unfiltered_count; provisional screening only.'})
+                    else:self._json({'themes':theme_summary(db),'method':'Unvalidated keyword-screening tags; review before management use.'})
             elif path=='/api/comments':
-                with closing(connect()) as db:self._json(list_comments(db,theme=q.get('theme'),phrase=q.get('q'),query_mode=q.get('match','any'),page=int(q.get('page',1)),size=int(q.get('size',20))))
+                with closing(connect()) as db:
+                    self._json(feedback.comments(db,**feedback_options(q,False),page=q.get('page',1),size=q.get('size',20))
+                               if feedback_requested(q) else
+                               list_comments(db,theme=q.get('theme'),phrase=q.get('q'),query_mode=q.get('match','any'),page=int(q.get('page',1)),size=int(q.get('size',20))))
             elif path.startswith('/api/comment/'):
                 cid=path[len('/api/comment/'):]
                 with closing(connect()) as db:
@@ -322,11 +360,13 @@ class Handler(BaseHTTPRequestHandler):
                             'subject':'Subject not yet reviewed',
                             'subject_summary':'Review representative comment before assigning a subject.'}))
                     d['attachment_text']=[dict(r) for r in db.execute('SELECT attachment_id,format,status,chars,method FROM attachment_text WHERE comment_id=?',(cid,))]
+                    d['v107']=feedback.index(db)['items'].get(cid)
                     self._json(d)
             elif path=='/api/export':
                 kind=q.get('kind','')
                 with closing(connect()) as db:
-                    csv=export_report(db,kind,theme=q.get('theme'),phrase=q.get('q'),query_mode=q.get('match','any'))
+                    csv=(feedback.export(db,**feedback_options(q,False)) if feedback_requested(q) and kind=='query_matches'
+                         else export_report(db,kind,theme=q.get('theme'),phrase=q.get('q'),query_mode=q.get('match','any')))
                     prefix='SYNTHETIC_TEST_' if metadata(db)['mode']=='synthetic demo' else ''
                 self._response(csv,ctype='text/csv; charset=utf-8',extra={'Content-Disposition':f'attachment; filename="{prefix}nhis_{kind}.csv"'})
             elif path in ('/','/index.html','/style.css','/app.js'):
@@ -447,6 +487,10 @@ def main():
         # Run before binding the listener: immutable hosted/local preview cannot repair stale FTS.
         from local_analysis import ensure_search_index, assert_search_index_complete
         if READ_ONLY: assert_search_index_complete(db)
+        if HOSTED:
+            v107=feedback.qc(db)
+            if not v107['ready']:raise SystemExit('V10.7 regression gate failed: '+str(v107))
+            print('V10.7 feedback gate:',v107['version'],v107['display_counts'])
         else: ensure_search_index(db)
         print('Local database:',DB_PATH,'records:',metadata(db)['records'])
     if HOSTED and not PUBLIC_DEMO and (not os.environ.get('DEMO_USER') or len(os.environ.get('DEMO_PASSWORD',''))<16):
