@@ -85,8 +85,10 @@ def semantic_module():
     return semantic_classify
 
 def feedback_options(q, management_view=False):
+    selected=q.get('theme','')
+    extra_topic=selected[len('v108__'):] if selected.startswith('v108__') else ''
     return dict(mode=q.get('form_mode','all'), section=q.get('section','') if management_view else '',
-        legacy_theme=q.get('theme',''), topic=q.get('v107_topic',''),
+        legacy_theme='' if extra_topic else selected, topic=extra_topic or q.get('v107_topic',''),
         tier=q.get('v107_tier','any'), subcategory=q.get('v107_content',''),
         query=q.get('q',''), match=q.get('match','any'),
         questionnaire=q.get('questionnaire',''))
@@ -229,7 +231,11 @@ class Handler(BaseHTTPRequestHandler):
         try:
             path=urlsplit(self.path).path
             q=self._query()
-            if path=='/api/v107/qc':
+            if path=='/api/v108/management-options':
+                with closing(connect()) as db:
+                    a=feedback_options(q,True)
+                    self._json(feedback.management_filter_options(db,**a))
+            elif path=='/api/v107/qc':
                 with closing(connect()) as db:self._json(feedback.qc(db))
             elif path=='/api/v107/stats':
                 with closing(connect()) as db:self._json(feedback.stats(db,**feedback_options(q,True)))
@@ -369,7 +375,7 @@ class Handler(BaseHTTPRequestHandler):
                          else export_report(db,kind,theme=q.get('theme'),phrase=q.get('q'),query_mode=q.get('match','any')))
                     prefix='SYNTHETIC_TEST_' if metadata(db)['mode']=='synthetic demo' else ''
                 self._response(csv,ctype='text/csv; charset=utf-8',extra={'Content-Disposition':f'attachment; filename="{prefix}nhis_{kind}.csv"'})
-            elif path in ('/','/index.html','/style.css','/app.js','/v107.js'):
+            elif path in ('/','/index.html','/style.css','/app.js','/v107.js','/v108_management.js'):
                 name='index.html' if path=='/' else path[1:]
                 mime=mimetypes.guess_type(name)[0] or 'application/octet-stream'
                 self._response((ASSETS/name).read_bytes(),ctype=mime)

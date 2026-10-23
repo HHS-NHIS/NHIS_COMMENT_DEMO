@@ -318,3 +318,47 @@ def qc(db):
             "missing_examples":missing,"display_counts":all_counts,
             "cluster_count":idx["cluster_count"],"multiple_primary_topic_comments":len(multi),
             "note":"Presence is a regression gate. Classifications are provisional, require human QC; examples are not hard-coded labels."}
+
+
+def management_filter_options(db, mode="all", section="support", legacy_theme="", topic="",
+                              tier="any", subcategory="", query="", match="any", questionnaire=""):
+    """Return only relevant topic and request-type choices under other selected facets."""
+    idx=index(db)
+    def scope(**changes):
+        args=dict(mode="all",section=section,legacy_theme=legacy_theme,topic=topic,tier=tier,
+                  subcategory=subcategory if section=="content" else "",query=query,
+                  match=match,questionnaire=questionnaire)
+        args.update(changes)
+        return set(filter_result(db,**args)[1])
+    def number(ids):
+        if mode=="exclude_clusters":
+            return sum(idx["items"][cid]["cluster_size"]==1 for cid in ids)
+        if mode=="representative":
+            return len({idx["items"][cid]["cluster_id"] for cid in ids})
+        return len(ids)
+    # Ignore the current topic to allow meaningful switching to other topics.
+    candidates=scope(legacy_theme="",topic="",tier="any")
+    choices=[]
+    import management_addon as mg
+    for t in mg.themes(db):
+        n=number(candidates & idx["semantic_themes"].get(t["id"],set()))
+        if n:choices.append({"kind":"legacy","id":t["id"],"label":t["name"],"count":n})
+    for tid,(label,_regex) in TOPICS.items():
+        n=number({cid for cid in candidates if tid in idx["items"][cid]["topics"]})
+        if n:choices.append({"kind":"additional","id":tid,"label":label,"count":n})
+    types=[]
+    if section=="content":
+        available=scope(subcategory="")
+        for code,label in SUBCATEGORIES.items():
+            n=number({cid for cid in available if code in idx["items"][cid]["content_subcategories"]})
+            if n:types.append({"id":code,"label":label,"count":n})
+    roles=[]
+    if topic:
+        available=scope(tier="any")
+        for role,label in (("primary","Primary concerns"),("secondary","Secondary / incidental")):
+            n=number({cid for cid in available if idx["items"][cid]["topics"].get(topic,{}).get("role")==role})
+            if n:roles.append({"id":role,"label":label,"count":n})
+    current=scope()
+    return {"ready":True,"section":section,"topics":choices,"recommendation_types":types,
+            "topic_roles":roles,"matching_submissions":len(current),
+            "matching_display_units":number(current)}
