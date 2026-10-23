@@ -62,6 +62,9 @@ class ContextRuleTests(unittest.TestCase):
  def test_no_nonpharmaceutical_medication_tag(self):
   x=f.classify_text("We recommend measuring non-pharmaceutical mental health management.")
   self.assertNotIn("medications",x["topics"])
+ def test_explicit_omission_from_proposed_survey(self):
+  x=f.classify_text("Existing NHIS assistance measures are not carried forward in the proposed 2028 questionnaire. My recommendation is to retain them.")
+  self.assertIn("removed",x["content_subcategories"])
  def test_keep_without_removal_context(self):
   x=f.classify_text("These questions are important and should continue in the survey.")
   self.assertNotIn("removed",x["content_subcategories"])
