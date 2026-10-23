@@ -47,7 +47,7 @@ REDUCE = re.compile(r"\b(?:delete|eliminat|remove|drop|omit|not be asked|reduce 
 WORDING = re.compile(r"\b(?:wording|phrasing|worded|response options?|response categor|skip pattern|skip logic|universe|asked of anyone|reword|replace with|the phrase.{0,70}deleted)\b",re.I)
 REQUEST = re.compile(r"\b(?:should include|should measure|include (?:questions?|measures?|topics?)|measure (?:the |this )?|recommend including)\b",re.I)
 SUPPORT_EXPLICIT = re.compile(r"\b(?:strongly\s+)?support(?:ing|s|ed)?\s+(?:the\s+)?(?:inclusion|including|addition|retention|retaining|use|measure|index)|\bendorse\s+(?:including|the)|\bin favor of\s+(?:adding|retaining|including)",re.I)
-SUPPORT_CONTEXT = re.compile(r"\b(?:important|essential|valuable|critical|beneficial|should be included|ought to be included|recommend including)\b",re.I)
+SUPPORT_CONTEXT = re.compile(r"\b(?:important|essential|valuable|critical|crucial|beneficial|should be included|ought to be included|recommend including)\b",re.I)
 MEASURE = re.compile(r"\b(?:whole.person health|wphi|index|measure|question|topic|survey|nhis)\b",re.I)
 
 _lock = threading.RLock()
@@ -76,7 +76,7 @@ def classify_text(text, title=""):
     subs=[]
     for sentence in sentences:
         if WORDING.search(sentence):subs.append("wording")
-        if REMOVED.search(sentence) and re.search(r"\b(?:question|item|measure|topic|content|survey|nhis|lonel|disability|help|marijuana|cannabis)\b",sentence,re.I):
+        if REMOVED.search(sentence) and re.search(r"\b(?:questions?|items?|measures?|topics?|content|survey|nhis|lonel\w*|disabilit\w*|help|marijuana|cannabis)\b",sentence,re.I):
             subs.append("removed")
         if REDUCE.search(sentence) and re.search(r"\b(?:question|item|content|section|survey|marijuana|cannabis)\b",sentence,re.I):
             subs.append("reduce")
