@@ -323,7 +323,12 @@ class Handler(BaseHTTPRequestHandler):
                         if section=='summary':
                             pass
                         elif section=='questionnaire':
-                            ids={a['comment_id'] for a in state['assignments'] if a.get('questionnaire_section')}
+                            requested=q.get('questionnaire','').strip()
+                            if len(requested)>100:self._json({'error':'Questionnaire filter too long'},400);return
+                            ids={a['comment_id'] for a in state['assignments']
+                                 if a.get('questionnaire_section') and
+                                 (not requested or requested in
+                                  [p.strip() for p in a.get('questionnaire_section','').split(' | ')])}
                         else:
                             ids={a['comment_id'] for a in state['assignments'] if a['category']==section}
                             if section=='support':ids|=idx['measure_support']
@@ -335,8 +340,13 @@ class Handler(BaseHTTPRequestHandler):
                     search=q.get('q','').strip().casefold()
                     if len(search)>300:self._json({'error':'Search too long'},400);return
                     if search:
-                        ids&={r[0] for r in db.execute('SELECT comment_id,plain_text,title,organization FROM comments')
-                              if any(search in (part or '').casefold() for part in (r[1],r[2],r[3]))}
+                        matches={r[0] for r in db.execute('SELECT comment_id,plain_text,title,organization FROM comments')
+                                 if any(search in (part or '').casefold() for part in (r[1],r[2],r[3]))}
+                        try:
+                            matches|={r[0] for r in db.execute("SELECT comment_id,text FROM attachment_text WHERE status='ok'")
+                                       if search in (r[1] or '').casefold()}
+                        except sqlite3.OperationalError:pass
+                        ids&=matches
                     mode=q.get('form_mode','all');topic=q.get('topic','')
                     relevance=q.get('relevance','any');action=q.get('content_action','')
                     try: stats=feedback.summary(idx,ids,mode,topic,relevance,action)
@@ -360,6 +370,15 @@ class Handler(BaseHTTPRequestHandler):
                         row['new_topics']=idx['topics'][cid]
                         row['content_actions']=idx['actions'][cid]
                         row['supports_measure']=cid in idx['measure_support']
+                        try:
+                            review=db.execute('''SELECT management_low_confidence,
+                               management_low_confidence_reasons,management_review_status
+                               FROM coded_comments_final WHERE comment_id=?''',(cid,)).fetchone()
+                        except sqlite3.OperationalError:review=None
+                        if review:
+                            row.update({'management_low_confidence':review[0],
+                                'management_low_confidence_reasons':review[1],
+                                'management_review_status':review[2]})
                         rows.append(row)
                     stats.update({'rows':rows,'total':stats['matching_records'],'page':page,
                        'page_size':size,'support_measure_overlay':section=='support',
