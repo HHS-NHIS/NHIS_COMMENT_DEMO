@@ -78,7 +78,11 @@ def classify_text(text, title=""):
         if WORDING.search(sentence):subs.append("wording")
         if REMOVED.search(sentence) and re.search(r"\b(?:questions?|items?|measures?|topics?|content|survey|nhis|lonel\w*|disabilit\w*|help|marijuana|cannabis)\b",sentence,re.I):
             subs.append("removed")
-        if REDUCE.search(sentence) and re.search(r"\b(?:question|item|content|section|survey|marijuana|cannabis)\b",sentence,re.I):
+        if (REDUCE.search(sentence) and
+            re.search(r"\b(?:questions?|items?|content|section|survey|marijuana|cannabis)\b",sentence,re.I) and
+            (re.search(r"\b(?:recommend(?:ation|ations|ed)?|suggest(?:ion|ed)?|should|propose|consider|please|urge|prefer|instead)\b",sentence,re.I)
+             or re.match(r"\s*(?:delete|remove|eliminate|drop|omit|reduce)\b",sentence,re.I)
+             or re.search(r"\b(?:should not be asked|do not ask|not be asked)\b",sentence,re.I))):
             subs.append("reduce")
         if ADDITION.search(sentence) and re.search(r"\b(?:question|measure|topic|content|follow.up|hemp|cbd|screen|treatment|cannabis|marijuana|survey|nhis)\b",sentence,re.I):
             subs.append("add")
