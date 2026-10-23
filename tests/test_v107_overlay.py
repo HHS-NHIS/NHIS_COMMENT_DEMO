@@ -101,7 +101,7 @@ class CorpusTests(unittest.TestCase):
         for suffix in ("0414","0428","0518"):
             cid="CDC-2026-1387-"+suffix
             val=self.idx["items"][cid]["support_specific_measure"]
-            self.assertIn(val,("explicit","review"),(cid,val))
+            self.assertIn(val,("explicit","review"),(cid,val,repr(self.idx["rows"][cid]["plain_text"][:1400]), self.idx["items"][cid]["topics"]))
             shown={r["comment_id"] for r in v.comments(self.db,section="support",query=cid,mode="all")["comments"]}
             # Queries search comment text, not IDs: use the complete support view instead.
             _,ids,_=v.filter_result(self.db,section="support",mode="all")
