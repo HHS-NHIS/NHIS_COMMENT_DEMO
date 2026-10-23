@@ -98,8 +98,6 @@ class CorpusTests(unittest.TestCase):
     def test_specific_management_examples(self):
         expected={"0020":"removed","0261":"removed","0262":"add",
                   "0004":"add","0324":"reduce","0368":"reduce","0313":"wording"}
-        demo=self.idx["rows"]["CDC-2026-1387-0020"]["plain_text"] or ""
-        print("SOURCE_0020_DIAGNOSTIC",repr(demo[:2200]),flush=True)
         mismatches=[]
         for suffix,subcategory in expected.items():
             cid="CDC-2026-1387-"+suffix
