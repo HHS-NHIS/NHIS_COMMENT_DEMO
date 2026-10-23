@@ -28,6 +28,12 @@ async function v107Render(){
     $('v107Explanation').textContent=d.explanation+' '+d.narrative_scope;
     $('v107Topics').innerHTML=d.topics.map(x=>v107Line(x.label,'Primary '+number(x.primary)+'; secondary '+number(x.secondary)+' · primary sources: '+x.example_ids.join(', '),x.primary+x.secondary)).join('');
     $('v107Contents').innerHTML=d.content_subcategories.map(x=>v107Line(x.label,'Rule-screened; review ambiguous requests against questionnaire history',x.count)).join('');
+    $('v107Distinctive').innerHTML=d.topics.filter(x=>x.primary_apparently_unique>0).sort((a,b)=>a.primary_apparently_unique-b.primary_apparently_unique).slice(0,12).map(x=>
+      '<article class="comment-card"><div class="comment-title">'+esc(x.label)+'</div>'+
+      '<div class="comment-meta">'+number(x.primary_apparently_unique)+' apparently unique · '+number(x.primary_clustered)+' repeated-cluster units with PRIMARY concern</div>'+
+      '<p class="footnote">'+esc(x.contrast_note)+'</p>'+
+      (x.distinctive_sources||[]).map(v=>'<div class="management-argument"><button type="button" class="tag open-detail" data-id="'+esc(v.comment_id)+'">'+esc(v.comment_id)+' ↗</button><p>'+esc(v.excerpt)+'</p></div>').join('')+
+      '</article>').join('')||'No apparently unique screened primary concerns in this selection.';
     $('v107Clusters').innerHTML=d.top_clusters.length?d.top_clusters.map(x=>
       '<article class="comment-card"><div class="comment-title">Cluster '+esc(x.cluster_id)+'</div>'+
       '<div class="comment-meta">'+number(x.total_cluster_size)+' full-corpus members · '+number(x.matching_submissions)+' match current filters</div>'+
