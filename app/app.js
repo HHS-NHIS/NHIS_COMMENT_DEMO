@@ -215,6 +215,11 @@ async function renderFeedback(page=1){
     metric('Personalized submissions in groups',number(r.personalized_in_matching))
   ].join('');
   $('fbLimitations').textContent=r.limitations+' '+r.narrative_scope;
+  $('fbDigest').innerHTML=(r.top_primary_topics||[]).length ?
+    (r.top_primary_topics||[]).map(t=>'<div class="review-card"><strong>'+esc(t.name)+
+      '</strong> · '+number(t.comment_records)+' screened primary-topic record(s)'+
+      '<div class="review-card-sub">Source examples: '+(t.evidence_ids||[]).map(cid=>'<button class="textbutton open-detail" data-id="'+esc(cid)+'">'+esc(cid)+'</button>').join(' · ')+'</div></div>').join(''):
+      '<p class="muted">No strongly indicated primary topics in this selection. This is not evidence that the comments lack substantive recommendations.</p>';
   $('fbResults').innerHTML=r.rows.map(x=>{
    const tags=Object.entries(x.new_topics||{}).map(([k,v])=>'<span class="tag">'+esc(v.name)+' · '+esc(v.relevance)+'</span>').join(' ');
    const flag=x.form_flag==='exact_repeated_text'?'Exact repeated text':x.form_flag==='likely_form_letter'?'Likely form letter':'Not flagged';
