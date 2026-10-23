@@ -24,10 +24,11 @@ from urllib.parse import parse_qs, urlsplit
 
 from local_analysis import local_models, answer as local_answer, compare_theme
 import management_addon as management  # additive, read-only reporting; no existing route overrides
+import feedback_addon as feedback  # read-only, no inference calls
 from core import (connect as core_connect, import_data, metadata, theme_summary, all_themes, list_comments,
                   theme_details, save_override, response_review, export_report, DB_PATH,
                   source_status, sync_from_folder, analysis_qc, management_html, save_analyst_review,
-                  rebuild_derived, ensure_derived_current, cluster_subjects)
+                  rebuild_derived, ensure_derived_current, cluster_subjects, filtered_ids)
 
 ASSETS=Path(__file__).resolve().parent
 MAX_BODY_BYTES=(80*1024 if os.getenv('NHIS_DEPLOYMENT_MODE','local').lower()=='hosted' else 75*1024*1024)
