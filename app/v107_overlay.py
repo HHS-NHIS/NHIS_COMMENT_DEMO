@@ -182,7 +182,7 @@ def filter_result(db, mode="all", section="", legacy_theme="", topic="", tier="a
         if match=="phrase":parts=[query.strip().strip('"').casefold()]
         require=all if match=="all" else any
         ids={cid for cid in ids if require(
-            token in (" ".join(str(idx["rows"][cid].get(k) or "") for k in ("plain_text","title","organization"))).casefold()
+            token in (" ".join(str(idx["rows"][cid].get(k) or "") for k in ("comment_id","plain_text","title","organization"))).casefold()
             for token in parts)}
     submission_ids=set(ids)
     if mode=="exclude_clusters":
@@ -230,12 +230,16 @@ def stats(db, **kw):
     topic_counts=Counter()
     secondary_counts=Counter()
     content_counts=Counter()
+    unique_primary=Counter()
+    clustered_primary=Counter()
     statuses=Counter()
     for cid in ids:
         x=idx["items"][cid]
         statuses[x["form_status"]]+=1
         for t,v in x["topics"].items():
             (topic_counts if v["role"]=="primary" else secondary_counts)[t]+=1
+            if v["role"]=="primary":
+                (clustered_primary if x["cluster_size"]>1 else unique_primary)[t]+=1
         for c in x["content_subcategories"]:content_counts[c]+=1
     # Counts describe displayed units; never equate them with persons or unique arguments.
     family_counts=Counter(idx["items"][cid]["cluster_id"] for cid in pre)
@@ -245,16 +249,27 @@ def stats(db, **kw):
                "total_cluster_size":len(idx["members"][cid]),
                "sample_ids":idx["members"][cid][:8],
                "personalized_ids":[x for x in idx["members"][cid] if idx["items"][x]["personalized"]][:8]} for cid,n in clusters[:35]]
-    concern_rows=[{"id":t,"label":TOPICS[t][0],"primary":topic_counts[t],"secondary":secondary_counts[t],
-                   "example_ids":[cid for cid in ids if idx["items"][cid]["topics"].get(t,{}).get("role")=="primary"][:4]}
-                  for t in TOPICS]
+    concern_rows=[]
+    for t in TOPICS:
+        qualifying=[cid for cid in ids if idx["items"][cid]["topics"].get(t,{}).get("role")=="primary"]
+        unique=[cid for cid in qualifying if idx["items"][cid]["cluster_size"]==1]
+        repeated=[cid for cid in qualifying if idx["items"][cid]["cluster_size"]>1]
+        concern_rows.append({"id":t,"label":TOPICS[t][0],"primary":topic_counts[t],"secondary":secondary_counts[t],
+            "primary_apparently_unique":unique_primary[t],"primary_clustered":clustered_primary[t],
+            "example_ids":qualifying[:4],
+            "distinctive_sources":[{"comment_id":cid,"excerpt":idx["items"][cid]["topics"][t]["evidence"][:250],
+                    "source_url":idx["rows"][cid]["comment_url"]} for cid in unique[:3]],
+            "repeated_sources":[{"comment_id":cid,"cluster_size":idx["items"][cid]["cluster_size"],
+                    "excerpt":idx["items"][cid]["topics"][t]["evidence"][:180]} for cid in repeated[:2]],
+            "contrast_version":VERSION,
+            "contrast_note":f"{unique_primary[t]} apparently unique displayed submissions and {clustered_primary[t]} displayed repeated-cluster units raise this as a provisional primary topic. These are not verified distinct arguments."})
     return {"version":VERSION,"mode":mode,"public_comment_submissions":3748,
             "displayed_units":len(ids),"matching_before_form_mode":len(pre),
             "approximate_clusters_in_filtered_submissions":len(family_counts),
             "status_counts":dict(statuses),"topics":concern_rows,
             "content_subcategories":[{"id":s,"label":label,"count":content_counts[s]} for s,label in SUBCATEGORIES.items()],
             "top_clusters":examples,
-            "explanation":"These are provisional rule-based screens. Form-letter grouping is not an adjudication of distinct substantive arguments.",
+            "explanation":"Versioned deterministic source-excerpt and count contrasts under the selected filters. No paid AI or regenerated narrative. Form-letter grouping is not an adjudication of distinct substantive arguments.",
             "narrative_scope":"Preserved V10.6 category and category×theme narratives are full-corpus, unfiltered, and do NOT change with controls."}
 
 def export(db,**kw):
