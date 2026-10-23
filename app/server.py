@@ -342,7 +342,7 @@ class Handler(BaseHTTPRequestHandler):
                     try: stats=feedback.summary(idx,ids,mode,topic,relevance,action)
                     except ValueError as ex:self._json({'error':str(ex)},400);return
                     if path.endswith('/export'):
-                        data=feedback.filtered_csv(db,idx,ids,mode,topic,relevance,action)
+                        data=feedback.filtered_csv(db,idx,ids,mode,topic,relevance,action,section)
                         self._response(data,ctype='text/csv; charset=utf-8',
                          extra={'Content-Disposition':'attachment; filename="NHIS_FORM_TOPIC_SCREENING.csv"'})
                         return
