@@ -368,7 +368,19 @@ class Handler(BaseHTTPRequestHandler):
             elif path=='/api/themes':
                 with closing(connect()) as db:self._json({'themes':theme_summary(db),'method':'Unvalidated keyword-screening tags; review before management use.'})
             elif path=='/api/comments':
-                with closing(connect()) as db:self._json(list_comments(db,theme=q.get('theme'),phrase=q.get('q'),query_mode=q.get('match','any'),page=int(q.get('page',1)),size=int(q.get('size',20))))
+                if q.get('form_mode','all')=='all':
+                    with closing(connect()) as db:self._json(list_comments(db,theme=q.get('theme'),phrase=q.get('q'),query_mode=q.get('match','any'),page=int(q.get('page',1)),size=int(q.get('size',20))))
+                else:
+                    with closing(connect()) as db:
+                        try:
+                            ids=filtered_ids(db,theme=q.get('theme'),phrase=q.get('q'),query_mode=q.get('match','any'))
+                            ids=sorted(feedback.select_ids(feedback.get_index(db),ids,q.get('form_mode','all')))
+                        except ValueError as ex:self._json({'error':str(ex)},400);return
+                        page=max(1,int(q.get('page',1)));size=max(1,min(int(q.get('size',20)),100))
+                        selected=ids[(page-1)*size:page*size]
+                        rows=[dict(db.execute('SELECT * FROM comments WHERE comment_id=?',(cid,)).fetchone()) for cid in selected]
+                        for row in rows:row.pop('normalized_sha',None)
+                        self._json({'total':len(ids),'page':page,'comments':rows})
             elif path.startswith('/api/comment/'):
                 cid=path[len('/api/comment/'):]
                 with closing(connect()) as db:
