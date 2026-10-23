@@ -102,7 +102,7 @@ def classify_text(text, title=""):
     subs=list(dict.fromkeys(subs))
     if "ambiguous" in subs and any(s in subs for s in ("removed","add")):
         subs.remove("ambiguous")
-    support_explicit=any((SUPPORT_EXPLICIT.search(s) or KEEP_MEASURE.search(s)) and MEASURE.search(s) for s in sentences)
+    support_explicit=any(SUPPORT_EXPLICIT.search(s) and MEASURE.search(s) for s in sentences)
     support_review=not support_explicit and any(SUPPORT_CONTEXT.search(s) and MEASURE.search(s) for s in sentences)
     many_primary=sum(v["role"]=="primary" for v in labels.values())>=5
     return {"topics":labels,"content_subcategories":subs,
