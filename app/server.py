@@ -390,7 +390,7 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/local/query':
                 if not isinstance(payload,dict):raise ValueError('Expected JSON object')
                 if READ_ONLY and (payload.get('model') or payload.get('approved')):raise ValueError('Hosted demo supports evidence-only queries; paid model calls are disabled')
-                with closing(connect()) as db:result=local_answer(db,str(payload.get('question','')),str(payload.get('theme_id','')),str(payload.get('model','')),approved=payload.get('approved') is True)
+                with closing(connect()) as db:result=local_answer(db,str(payload.get('question','')),str(payload.get('theme_id','')),str(payload.get('model','')),approved=payload.get('approved') is True,feedback_filter=payload.get('v107'))
                 self._json(result)
             elif path=='/api/local/compare':
                 if not isinstance(payload,dict):raise ValueError('Expected JSON object')
