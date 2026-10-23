@@ -147,17 +147,17 @@ def summary(index,ids,mode='all',topic='',relevance='any',action=''):
             'content_action_screen':dict(action_counts),
             'limitations':'All labels are provisional screening. Excluding form-letter groups may omit substantive personal additions. Original submission counts are preserved.'}
 
-def filtered_csv(db,index,ids,mode='all',topic='',relevance='any',action=''):
+def filtered_csv(db,index,ids,mode='all',topic='',relevance='any',action='',section=''):
     details=summary(index,ids,mode,topic,relevance,action)
     urls=dict(db.execute('SELECT comment_id,comment_url FROM comments'))
     output=io.StringIO(newline='');w=csv.writer(output)
-    w.writerow(['comment_id','form_letter_flag','cluster_id','cluster_size','overlap',
+    w.writerow(['selected_management_view','supports_specific_measure','comment_id','form_letter_flag','cluster_id','cluster_size','overlap',
                 'personalized','exploratory_topic','relevance','content_actions','source_url'])
     for cid in details['ids']:
         flag=index['flags'][cid]
         matches=index['topics'][cid].items() or [('',{})]
         for topic_id,t in matches:
-            w.writerow([cid,flag['status'],flag['cluster_id'],flag['cluster_size'],
+            w.writerow([section,int(cid in index['measure_support']),cid,flag['status'],flag['cluster_id'],flag['cluster_size'],
                        flag['overlap'],int(flag['personalized']),topic_id,t.get('relevance',''),
                        '|'.join(index['actions'][cid]),urls.get(cid,'')])
     return output.getvalue().encode('utf-8-sig')
