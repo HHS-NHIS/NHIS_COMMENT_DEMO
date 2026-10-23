@@ -28,7 +28,7 @@ import feedback_addon as feedback  # read-only, no inference calls
 from core import (connect as core_connect, import_data, metadata, theme_summary, all_themes, list_comments,
                   theme_details, save_override, response_review, export_report, DB_PATH,
                   source_status, sync_from_folder, analysis_qc, management_html, save_analyst_review,
-                  rebuild_derived, ensure_derived_current, cluster_subjects, filtered_ids)
+                  rebuild_derived, ensure_derived_current, cluster_subjects, filtered_ids, FIELDS, to_csv)
 
 ASSETS=Path(__file__).resolve().parent
 MAX_BODY_BYTES=(80*1024 if os.getenv('NHIS_DEPLOYMENT_MODE','local').lower()=='hosted' else 75*1024*1024)
@@ -402,7 +402,14 @@ class Handler(BaseHTTPRequestHandler):
             elif path=='/api/export':
                 kind=q.get('kind','')
                 with closing(connect()) as db:
-                    csv=export_report(db,kind,theme=q.get('theme'),phrase=q.get('q'),query_mode=q.get('match','any'))
+                    if kind=='query_matches' and q.get('form_mode','all')!='all':
+                        try:
+                            selected=filtered_ids(db,theme=q.get('theme'),phrase=q.get('q'),query_mode=q.get('match','any'))
+                            ids=sorted(feedback.select_ids(feedback.get_index(db),selected,q.get('form_mode','all')))
+                        except ValueError as ex:self._json({'error':str(ex)},400);return
+                        csv=to_csv(FIELDS,[dict(db.execute('SELECT '+','.join(FIELDS)+' FROM comments WHERE comment_id=?',(cid,)).fetchone()) for cid in ids])
+                    else:
+                        csv=export_report(db,kind,theme=q.get('theme'),phrase=q.get('q'),query_mode=q.get('match','any'))
                     prefix='SYNTHETIC_TEST_' if metadata(db)['mode']=='synthetic demo' else ''
                 self._response(csv,ctype='text/csv; charset=utf-8',extra={'Content-Disposition':f'attachment; filename="{prefix}nhis_{kind}.csv"'})
             elif path in ('/','/index.html','/style.css','/app.js'):
