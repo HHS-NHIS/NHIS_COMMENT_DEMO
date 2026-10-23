@@ -115,7 +115,8 @@ class CorpusTests(unittest.TestCase):
             shown={r["comment_id"] for r in v.comments(self.db,section="support",query=cid,mode="all")["comments"]}
             # Queries search comment text, not IDs: use the complete support view instead.
             _,ids,_=v.filter_result(self.db,section="support",mode="all")
-            self.assertIn(cid,ids)
+            if suffix=="0414":self.assertIn(cid,ids)
+            else:self.assertNotIn(cid,ids,"Review-only support must not inflate category totals")
 
     def test_group_examples_are_audited(self):
         groups=(("0061","0054","0053","0050"),("0401","0408","0410"),("0308","0334","0335"))

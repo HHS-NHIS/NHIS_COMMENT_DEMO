@@ -1,4 +1,4 @@
-/* V10.7 feedback UI: public read-only; all filtering handled server-side. */
+/* V10.8.1 feedback UI: public read-only; all filtering handled server-side. */
 sections.feedback=['FORM-LETTER ANALYSIS','Find recurring submissions without losing distinctive concerns.','Exact duplicates, approximate clusters and personalized variants; source-linked and provisional.'];
 function v107Params(){
   return {form_mode:$('v107Mode')?.value||'all',v107_topic:$('v107Topic')?.value||'',
@@ -44,7 +44,7 @@ async function v107Render(){
     $('v107FilterStatus').textContent=
       'Showing '+number(d.displayed_units)+' units from '+number(d.matching_before_form_mode)+
       ' matching public submissions; the original frozen corpus remains 3,748. '+d.narrative_scope;
-  }catch(e){$('v107Explanation').textContent='V10.7 filter analysis unavailable: '+e.message;}
+  }catch(e){$('v107Explanation').textContent='V10.8.1 filter analysis unavailable: '+e.message;}
 }
 async function v107RefreshThemeCounts(){
   try{
@@ -69,7 +69,7 @@ openDetail=async function(cid){
     const support=x.support_specific_measure?
       ' · Specific-measure support: '+esc(x.support_specific_measure)+(x.support_specific_measure==='review'?' (review before counting as confirmed)':''):'';
     $('detailBody').insertAdjacentHTML('afterbegin',
-      '<div class="banner info"><strong>V10.7: '+esc(group)+'</strong>'+
+      '<div class="banner info"><strong>V10.8.1: '+esc(group)+'</strong>'+
       '<p>Cluster '+esc(x.cluster_id)+' · '+number(x.cluster_size)+' source submissions · overlap '+number(Math.round(x.overlap*100))+'% · novel five-word phrases '+number(x.novel_words)+support+'</p>'+
       '<div class="tags">'+topics+'</div>'+
       '<p class="footnote">Content classifications: '+esc(x.content_subcategories.join(' | ')||'None screened')+
@@ -84,7 +84,7 @@ managementComments=async function(){
   await v107BaseManagementComments();
   const section=$('mgSection').value,theme=$('mgTheme').value;
   const message=section==='support'
-    ? 'The V10.6 support narrative and 240 original intersections exclude newly screened support for a specific measure. V10.7 filtered record counts below may include measure-specific support; ambiguous statements remain flagged for human review.'
+    ? 'The V10.6 support narrative and 240 original intersections exclude newly screened support for a specific measure. V10.8.1 filtered record counts below may include measure-specific support; ambiguous statements remain flagged for human review.'
     : 'V10.6 section and category × theme prose covers the original full cohort. Changing form-letter, topic, or search filters DOES NOT regenerate those legacy narratives or their cited counts.';
   $('v107ManagementScope').textContent=message;
   try{
@@ -118,5 +118,5 @@ document.addEventListener('DOMContentLoaded',()=>{
       '<option value="'+esc(t.id)+'">'+esc(t.label)+'</option>').join('');
     v107Ready=true;
     v107Render();
-  }).catch(e=>{$('v107FilterStatus').textContent='Could not load V10.7 rules: '+e.message;});
+  }).catch(e=>{$('v107FilterStatus').textContent='Could not load V10.8.1 rules: '+e.message;});
 });

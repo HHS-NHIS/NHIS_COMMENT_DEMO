@@ -1,6 +1,6 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NHIS Comment Intelligence · Private Local Preview</title><link rel="stylesheet" href="/style.css"></head>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NHIS 2028 redesign · Comment Intelligence V10.8.1</title><link rel="stylesheet" href="/style.css"></head>
 <body><div class="shell">
-<aside class="sidebar"><div class="brand"><span class="brand-mark">N</span><span>NHIS <strong>Comment Intelligence</strong><small>PRIVATE LOCAL DRAFT · CDC-2026-1387</small></span></div>
+<aside class="sidebar"><div class="brand"><span class="brand-mark">N</span><span>NHIS <strong>Comment Intelligence</strong><small>PROVISIONAL PUBLIC ANALYSIS · CDC-2026-1387</small></span></div>
 <nav id="nav">
 <button class="nav active" data-tab="overview"><span>◫</span> Overview</button>
 <button class="nav" data-tab="local-ai"><span>◇</span> Evidence search</button>
@@ -18,8 +18,8 @@
 <header class="head"><div><div class="eyebrow" id="sectionEyebrow">CORPUS OVERVIEW</div><h1 id="sectionTitle">What are commenters saying?</h1><p class="lede" id="sectionDesc">A traceable view of public comments, supporting evidence, and response-review coverage.</p></div><button class="button ghost" id="importShortcut">Import comments <span>↗</span></button></header>
 <div id="message" class="message hide" role="status"></div>
 <div id="statusBanner" class="banner warning">Preliminary source data loading…</div>
-<article class="panel hide" id="v107GlobalPanel" aria-label="V10.7 shared feedback filters">
-<div class="panelhead"><div><h2>V10.7 · Shared feedback filters</h2><p>Applies to search, comment exploration, management results, topic breakdowns and filtered CSV exports. Does not change the 3,748 public submissions or legacy saved narratives.</p></div></div>
+<article class="panel hide" id="v107GlobalPanel" aria-label="Form-letter analysis filters">
+<div class="panelhead"><div><h2>Form-letter analysis filters</h2><p>Applies to form-letter analysis and evidence browsing; Management Synthesis has its own integrated controls. The full corpus remains 3,748 submissions.</p></div></div>
 <div class="formrow">
 <label><span>Form-letter mode</span><select id="v107Mode">
 <option value="all">All comments (3,748 submissions)</option>
@@ -43,20 +43,20 @@
 <div class="banner warning" id="mgStatus">Loading management artifact status…</div>
 <div class="formrow"><label class="grow"><span>Management reporting section</span><select id="mgSection"></select></label>
 <label><span>Topic / measure (AI-assisted, provisional)</span><select id="mgTheme"><option value="">All themes</option></select></label>
-<label class="grow"><span>Search matching source records</span><input id="mgQuery" placeholder="Filter by comment text, title or organization"></label>
+<label class="grow"><span>Search matching source records</span><input id="mgQuery" placeholder="Exact phrase in comment or attachment (e.g. whole person health)"></label>
 <button id="mgApply" class="button primary compact">Apply filters</button><button id="mgReset" class="button subtle compact">All / Reset</button></div>
 <div id="mgSubsections" class="formrow hide"><label><span>Questionnaire section</span><select id="mgQuestionnaire"><option value="">All questionnaire sections</option></select></label></div>
 <div class="formrow" id="mgIntegratedFilters"><label><span>Recommendation type</span><select id="mgContent"><option value="">All recommendation types</option></select></label><label><span>Topic importance</span><select id="mgTier"><option value="any">All topic mentions</option></select></label><label><span>Form-letter treatment</span><select id="mgFormMode"><option value="all">All submissions</option><option value="representative">One representative per cluster</option><option value="exclude_clusters">Exclude identified clusters</option></select></label></div><p class="footnote" id="mgIntegratedContext">All filters narrow one common matching comment set and CSV export.</p><div class="actions"><button id="mgDownloadCSV" class="button subtle" disabled>Export filtered records ↓</button><button id="mgDownloadWord" class="button subtle" disabled>Download management Word report ↓</button><button id="mgDownloadCodedCSV" class="button subtle" disabled>Download all 3,748 coded comments ↓</button><button id="mgDownloadTopicCSV" class="button subtle" disabled>Download all management × topic summaries (CSV) ↓</button><button id="mgDownloadTopicWord" class="button subtle" disabled>Download detailed topic summaries (Word) ↓</button></div>
 <div class="checks review">The controls above narrow counts, evidence records and the matching CSV together. Saved V10.6 prose and its Word reports remain full-cohort <strong>historical references</strong>, not filtered summaries.</div>
 </article>
-<article class="panel"><div class="panelhead"><div><h2 id="mgNarrativeTitle">Category synthesis</h2><p id="mgCount">Count pending final management classification</p></div></div><div id="mgComboSummary" class="management-combo hide" aria-live="polite"></div><div class="checks review" id="v107ManagementScope">The V10.6 narratives are frozen and do not change when a V10.7 filter is applied.</div><div id="mgNarrative" class="prewrap muted">No final summary has been generated from the frozen corpus.</div><details id="mgRuleDetails" class="management-rules" open><summary>How these coding rules work — definitions, overlap and limitations</summary>
+<article class="panel"><div class="panelhead"><div><h2 id="mgNarrativeTitle">Category synthesis</h2><p id="mgCount">Count pending final management classification</p></div></div><div id="mgComboSummary" class="management-combo hide" aria-live="polite"></div><div class="checks review" id="v107ManagementScope">The V10.6 narratives are frozen and do not change with filtered source selections.</div><div id="mgNarrative" class="prewrap muted">No final summary has been generated from the frozen corpus.</div><details id="mgRuleDetails" class="management-rules" open><summary>How these coding rules work — definitions, overlap and limitations</summary>
 <p class="footnote">This shows the original screening interpretation alongside the compiled synthesis. Categories are <strong>not mutually exclusive</strong>. These descriptions are provisional and are not approved agency decisions.</p>
 <div id="mgRuleDescription" class="prewrap"></div><div id="mgOverlapExplanation"></div><div id="mgRuleCodes"></div>
 </details><div id="mgCitations" class="tags"></div><div id="mgCompiledArguments"></div><div id="mgRepeatedGroups"></div><div id="mgTopics"></div><div id="v107ManagementSignals" class="management-rule-table"></div></article>
 <article class="panel"><div class="panelhead"><div><h2>Matching comment records</h2><p>Open source-linked comments in the existing read-only comment-detail viewer. Each submission remains separately countable, including near-duplicate form letters.</p></div></div><div id="mgResults" class="commentgrid"></div><div id="mgPager" class="pager"></div></article>
 </section>
 <section id="tab-feedback" class="tabpanel hide">
-<article class="panel"><div class="panelhead"><div><h2>Form-Letter Analysis</h2><p>Exact text repetitions, approximate template clusters, personalized variants and potentially unique submissions. Provisional, auditable screen over the same frozen corpus; source comments remain available.</p></div><button class="button subtle" id="v107Export">Download filtered V10.7 classification CSV ↓</button></div>
+<article class="panel"><div class="panelhead"><div><h2>Form-Letter Analysis</h2><p>Exact text repetitions, approximate template clusters, personalized variants and potentially unique submissions. Provisional, auditable screen over the same frozen corpus; source comments remain available.</p></div><button class="button subtle" id="v107Export">Download filtered V10.8.1 classification CSV ↓</button></div>
 <div id="v107Stats" class="integrity"></div><div class="checks review" id="v107Explanation">Analyzing frozen source records…</div>
 <h3>Primary and secondary topical concerns in this view</h3><div class="footnote">Each comment can have multiple primary topics. Secondary mentions are tracked separately; totals may overlap.</div>
 <div id="v107Topics" class="management-rule-table"></div>

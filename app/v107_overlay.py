@@ -11,7 +11,7 @@ import sqlite3
 import threading
 from collections import Counter, defaultdict
 
-VERSION = "v10.7-feedback-rules-20261023"
+VERSION = "v10.8.1-management-qc-20261023"
 MODES = ("all", "representative", "exclude_clusters")
 TOPICS = {
     "tobacco": ("Tobacco, nicotine, and cigarettes", r"\b(?:tobacco|nicotine|cigarettes?|cigars?|smoking|smokers?|e-cigarettes?|vaping|vapes?)\b"),
@@ -20,7 +20,7 @@ TOPICS = {
     "cardiovascular": ("Cardiovascular / heart health", r"\b(?:cardiovascular|heart (?:disease|health|attack|failure)|hypertension|blood pressure|stroke|coronary)\b"),
     "asthma": ("Asthma", r"\basthma(?:tic)?\b"),
     "diabetes": ("Diabetes", r"\b(?:diabetes|diabetic|blood glucose|a1c|insulin resistance)\b"),
-    "medications": ("Medications and prescriptions", r"\b(?:medications?|prescriptions?|prescribed drugs?|pharmaceuticals?|drug coverage|treatment adherence)\b"),
+    "medications": ("Medications and prescriptions", r"(?<!non-)\b(?:medications?|prescriptions?|prescribed drugs?|pharmaceuticals?|drug coverage|treatment adherence)\b"),
     "services": ("Health care services and visits", r"\b(?:health ?care visits?|doctor visits?|office visits?|provider visits?|medical appointments?|health services?|emergency department|primary care visits?)\b"),
     "insurance": ("Health insurance and coverage", r"\b(?:health insurance|insurance coverage|uninsured|underinsured|medicaid|medicare|private insurance|health plan|insurance status|insured status|coverage gap)\b"),
     "costs": ("Health care costs", r"\b(?:health ?care costs?|medical costs?|out.of.pocket|co.?pays?|co.?payments?|medical bills?|medical debt|affordability of (?:care|treatment|medicine)|cost of care)\b"),
@@ -37,47 +37,58 @@ SUBCATEGORIES = {
     "wording": "Question wording, response options, skip patterns, or universes",
     "ambiguous": "Unclear restoration versus addition — review",
 }
-# Commenting *about* a health condition is not itself evidence that the NHIS should measure it.
-INTENT = re.compile(r"\b(?:recommend|suggest|propos|support|endors|retain|keep|restore|include|add|collect|measure|ask|questions?|items?|change|revise|should|survey|nhis|index|assess|capture|track|important|critical)\w*\b",re.I)
+# A condition mention or a general reference to NHIS is not a request for that measure.
+ACTION = re.compile(r"\b(?:recommend(?:ation|ed)?|suggest(?:ion|ed)?|propos\w*|urge|support(?:ed|ing)?|endorse\w*|retain|keep|restore|reinstat\w*|include|add|collect|measure|ask|question|revise|change|modify|drop|remove|eliminat\w*|should|must|need)\b", re.I)
 ASSOCIATION = re.compile(r"\b(?:associated with|linked to|correlat(?:es|ed|ion)|risk factor for|co.?occur|such as|including higher rates of|higher levels of)\b",re.I)
 SENTENCES = re.compile(r"(?<=[.!?])\s+|\n+")
-REMOVED = re.compile(r"\b(?:retain|restore|reinstat|keep|continu|removing|not\s+(?:remove|eliminat|drop)|removed|removal|dropping|cuts?\s+to|losing|reduc(?:ed|tion)\s+(?:of|in))\w*\b",re.I)
+# Retaining something is not evidence of a removal concern unless an actual or
+# proposed deletion is identified. This excludes broad "keep" form-letter language.
+REMOVAL_CONTEXT = re.compile(r"\b(?:remov(?:e|ed|al|ing)|eliminat\w*|dropp?(?:ed|ing)?|deleted?|discontinu\w*|cut(?:ting|s)?|propos\w*.{0,60}?(?:reduc\w*|remov\w*|delet\w*)|reduc(?:ed|tion|ing)\s+(?:of|in)\b)\b",re.I)
+MEASURE_SUBJECT = re.compile(r"\b(?:questions?|items?|measures?|topics?|content|modules?|sections?|survey|nhis|lonel\w*|disabilit\w*|help|marijuana|cannabis|insurance|access)\b",re.I)
 ADDITION = re.compile(r"\b(?:add|additional|new (?:question|measure|topic)|introduc|expand|incorporat|should be included|should include|include (?:a|the)\s+(?:new|brief)|follow.up identifying)\w*\b",re.I)
 REDUCE = re.compile(r"\b(?:delete|eliminat|remove|drop|omit|not be asked|reduce (?:the |existing )?(?:questions|items|content)|shorten)\w*\b",re.I)
 WORDING = re.compile(r"\b(?:wording|phrasing|worded|response options?|response categor|skip pattern|skip logic|universe|asked of anyone|reword|replace with|the phrase.{0,70}deleted)\b",re.I)
 REQUEST = re.compile(r"\b(?:should include|should measure|include (?:questions?|measures?|topics?)|measure (?:the |this )?|recommend including)\b",re.I)
 SUPPORT_EXPLICIT = re.compile(r"\b(?:strongly\s+)?support(?:ing|s|ed)?\s+(?:the\s+)?(?:inclusion|including|addition|retention|retaining|use|measure|index)|\bendorse\s+(?:including|the)|\bin favor of\s+(?:adding|retaining|including)",re.I)
+KEEP_MEASURE = re.compile(r"\b(?:retain|keep|restore|continue)\s+(?:the\s+)?(?:\w+\s+){0,3}(?:questions?|items?|measures?|index|scale|topics?|module|section)\b",re.I)
 SUPPORT_CONTEXT = re.compile(r"\b(?:important|essential|valuable|critical|crucial|beneficial|should be included|ought to be included|recommend including)\b",re.I)
 MEASURE = re.compile(r"\b(?:whole.person health|wphi|index|measure|question|topic|survey|nhis)\b",re.I)
 
-_lock = threading.RLock()
-_cached = None
+def direct_request(sentence, pattern):
+    """A nearby requested ACTION, not general survey vocabulary or co-morbidity."""
+    for term in pattern.finditer(sentence):
+        before=sentence[max(0,term.start()-115):term.start()]
+        after=sentence[term.end():term.end()+100]
+        association=ASSOCIATION.search(sentence)
+        if association and term.start()>association.start():
+            continue
+        if ACTION.search(before) or ACTION.search(after):
+            return True
+    return False
 
 def classify_text(text, title=""):
-    """Conservative sentence-based, multi-primary topical tagging. Return labels and evidence."""
+    """Deterministic high-precision topical screening; flag rather than force weak cases."""
     text=(text or "")[:160000]
     sentences=[s.strip() for s in SENTENCES.split(text) if s.strip()]
     labels={}
     for tid,(name,pattern) in TOPICS.items():
         pat=re.compile(pattern,re.I)
-        hit=[]; substantive=[]
-        for sentence in sentences:
-            if not pat.search(sentence):continue
-            hit.append(sentence[:330])
-            # An incidental association without a measure request is SECONDARY.
-            if INTENT.search(sentence) and not (ASSOCIATION.search(sentence) and not re.search(r"\b(?:measure|question|include|recommend|collect|retain)\b",sentence,re.I)):
-                substantive.append(sentence[:330])
-        if not hit:continue
-        title_hit=bool(pat.search(title or ""))
-        primary=bool(substantive or title_hit or (len(hit)>=2 and not all(ASSOCIATION.search(s) for s in hit)))
-        labels[tid]={"label":name,"role":"primary" if primary else "secondary",
-                      "evidence":(substantive or hit)[0],"mentions":len(hit),
-                      "method":"v10.7 deterministic sentence/context screening"}
+        hits=[s for s in sentences if pat.search(s)]
+        if not hits and not pat.search(title or ""):
+            continue
+        substantive=[s for s in hits if direct_request(s,pat)]
+        role="primary" if substantive else "secondary"
+        evidence=(substantive or hits or [title or ""])[0][:330]
+        labels[tid]={"label":name,"role":role,"evidence":evidence,
+                     "mentions":len(hits),"method":"v10.8.1 direct-request context screening"}
     subs=[]
     for sentence in sentences:
-        if WORDING.search(sentence):subs.append("wording")
-        if REMOVED.search(sentence) and re.search(r"\b(?:questions?|items?|measures?|topics?|content|survey|nhis|lonel\w*|disabilit\w*|help|marijuana|cannabis)\b",sentence,re.I):
-            subs.append("removed")
+        if WORDING.search(sentence): subs.append("wording")
+        if REMOVAL_CONTEXT.search(sentence) and MEASURE_SUBJECT.search(sentence):
+            # "Please remove this question" is a request to reduce, not concern
+            # over CDC's removal. Explicit opposition / reinstatement is required.
+            if re.search(r"\b(?:retain|restore|reinstat\w*|keep|continue|should not|do not|not to|concern\w*|oppose\w*|worr\w*|harm\w*|will result|could result|under.?count|would lose|losing|removal|removing|removed|proposed)\b",sentence,re.I):
+                subs.append("removed")
         if (REDUCE.search(sentence) and
             re.search(r"\b(?:questions?|items?|content|section|survey|marijuana|cannabis)\b",sentence,re.I) and
             (re.search(r"\b(?:recommend(?:ation|ations|ed)?|suggest(?:ion|ed)?|should|propose|consider|please|urge|prefer|instead)\b",sentence,re.I)
@@ -86,17 +97,18 @@ def classify_text(text, title=""):
             subs.append("reduce")
         if ADDITION.search(sentence) and re.search(r"\b(?:question|measure|topic|content|follow.up|hemp|cbd|screen|treatment|cannabis|marijuana|survey|nhis)\b",sentence,re.I):
             subs.append("add")
-        if REQUEST.search(sentence) and not (REMOVED.search(sentence) or ADDITION.search(sentence)):
+        if REQUEST.search(sentence) and not (REMOVAL_CONTEXT.search(sentence) or ADDITION.search(sentence)):
             subs.append("ambiguous")
-    # Ignore an ambiguous instruction when the same request clearly specifies new vs restoration.
     subs=list(dict.fromkeys(subs))
     if "ambiguous" in subs and any(s in subs for s in ("removed","add")):
         subs.remove("ambiguous")
-    support_explicit=any(SUPPORT_EXPLICIT.search(s) and MEASURE.search(s) for s in sentences)
+    support_explicit=any((SUPPORT_EXPLICIT.search(s) or KEEP_MEASURE.search(s)) and MEASURE.search(s) for s in sentences)
     support_review=not support_explicit and any(SUPPORT_CONTEXT.search(s) and MEASURE.search(s) for s in sentences)
+    many_primary=sum(v["role"]=="primary" for v in labels.values())>=5
     return {"topics":labels,"content_subcategories":subs,
             "support_specific_measure":"explicit" if support_explicit else "review" if support_review else "",
-            "support_scope":"specific_measure_not_redesign" if support_explicit or support_review else ""}
+            "support_scope":"specific_measure_not_redesign" if support_explicit or support_review else "",
+            "multiple_primary_review":many_primary}
 
 def index(db):
     """Immutable hosted snapshot index, built once and held in memory."""
@@ -113,9 +125,30 @@ def index(db):
         clusters={r["comment_id"]:dict(r) for r in db.execute("SELECT * FROM comment_clusters")}
         if set(rows)!=set(clusters):
             raise ValueError("V10.7 cluster coverage mismatch")
+        # Additional independently flagged copies span three old cluster IDs.
+        # This is a *documented analytic link*, not a database overwrite.
+        linked=["CDC-2026-1387-"+suffix for suffix in ("0308","0334","0335")]
+        if not all(cid in clusters for cid in linked):
+            raise ValueError("Expected linked form-letter example missing")
+        original_group_ids={clusters[cid]["cluster_id"] for cid in linked}
+        representative=clusters[linked[0]]["cluster_id"]
+        for cid,c in clusters.items():
+            c["original_cluster_id"]=c["cluster_id"]
+            c["cross_cluster_review"]=c["cluster_id"] in original_group_ids
+            if c["cross_cluster_review"]:
+                c["cluster_id"]=representative
         hashes=Counter(r["normalized_sha"] for r in rows.values() if r["normalized_sha"])
         members=defaultdict(list)
         for cid,c in clusters.items():members[c["cluster_id"]].append(cid)
+        full_search={}
+        for cid,r in rows.items():
+            src=" ".join(str(r.get(k) or "") for k in ("comment_id","plain_text","title","organization"))
+            src+="\n"+"\n".join(attachment_text.get(cid,[]))
+            full_search[cid]=re.sub(r"\s+"," ",src).casefold()
+        for group in members.values():
+            n=len(group)
+            for cid in group:
+                clusters[cid]["cluster_size"]=n
         items={}
         for cid,r in rows.items():
             c=clusters[cid]
@@ -132,7 +165,8 @@ def index(db):
                 "cluster_id":c["cluster_id"],"cluster_size":size,
                 "exact_duplicate":exact,"personalized":personalized,
                 "overlap":c["overlap"],"novel_words":c["novel_words"],
-                "needs_review":unclear or bool("ambiguous" in analyzed["content_subcategories"]) or analyzed["support_specific_measure"]=="review",
+                "needs_review":unclear or c["cross_cluster_review"] or analyzed["multiple_primary_review"] or bool("ambiguous" in analyzed["content_subcategories"]) or analyzed["support_specific_measure"]=="review",
+                "original_cluster_id":c["original_cluster_id"],"cross_cluster_review":c["cross_cluster_review"],
                 "method":("Exact normalized-text fingerprint" if exact else
                           "Existing five-word shingle cluster with novel-text flag" if size>1 else
                           "No existing near-duplicate cluster; unique only within frozen corpus")}
@@ -143,7 +177,7 @@ def index(db):
         for cid,tid in db.execute("SELECT comment_id,theme_id FROM semantic_tags"):
             semantic_themes[tid].add(cid)
         allids=set(rows)
-        _cached={"rows":rows,"items":items,"members":dict(members),"themes":dict(themes),
+        _cached={"rows":rows,"items":items,"members":dict(members),"search_text":full_search,"themes":dict(themes),
                  "allids":allids,"cluster_count":len(members),"semantic_themes":dict(semantic_themes)}
         return _cached
 
@@ -168,7 +202,8 @@ def filter_result(db, mode="all", section="", legacy_theme="", topic="", tier="a
         elif section!="summary":
             ids &= {x["comment_id"] for x in a if x["category"]==section}
             if section=="support":
-                ids |= {cid for cid,x in idx["items"].items() if x["support_specific_measure"] in ("explicit","review")}
+                # Weak "important" mentions are REVIEW ONLY and cannot inflate Support.
+                ids |= {cid for cid,x in idx["items"].items() if x["support_specific_measure"]=="explicit"}
     if legacy_theme:
         active_themes=idx["semantic_themes"] if section else idx["themes"]
         if legacy_theme not in active_themes:raise ValueError("Unknown original AI theme")
@@ -185,9 +220,7 @@ def filter_result(db, mode="all", section="", legacy_theme="", topic="", tier="a
         if match not in ("any","all","phrase"):raise ValueError("Unknown match semantics")
         if match=="phrase":parts=[query.strip().strip('"').casefold()]
         require=all if match=="all" else any
-        ids={cid for cid in ids if require(
-            token in (" ".join(str(idx["rows"][cid].get(k) or "") for k in ("comment_id","plain_text","title","organization"))).casefold()
-            for token in parts)}
+        ids={cid for cid in ids if require(token in idx["search_text"][cid] for token in parts)}
     submission_ids=set(ids)
     if mode=="exclude_clusters":
         ids={cid for cid in ids if idx["items"][cid]["cluster_size"]==1}
@@ -226,7 +259,18 @@ def comments(db, **kw):
                 "posted_date":r["posted_date"],"comment_url":r["comment_url"],"excerpt":r["plain_text"][:900],
                 "cluster_id":r["v107"]["cluster_id"],"cluster_size":r["v107"]["cluster_size"],
                 "v107":r["v107"]} for r in rec],
-            "narrative_scope":"V10.6 static narratives are unfiltered; these are v10.7 filtered record counts."}
+            "narrative_scope":"V10.6 static narratives are unfiltered; these are corrected V10.8.1 counts."}
+
+def support_review_summary(db,kw,idx):
+    """Undecided measure-support signals, NEVER included in Support totals."""
+    settings={k:kw.get(k) for k in ("legacy_theme","topic","tier","query","match")}
+    settings={k:v for k,v in settings.items() if v is not None}
+    _,candidates,_=filter_result(db,section="summary",mode="all",**settings)
+    import management_addon as mg
+    existing={a["comment_id"] for a in mg.load(db)["assignments"] if a["category"]=="support"}
+    ambiguous=sorted(cid for cid in candidates if idx["items"][cid]["support_specific_measure"]=="review" and cid not in existing)
+    return {"count":len(ambiguous),"example_ids":ambiguous[:10],
+            "note":"Potential specific-measure support; NOT included in Support totals until reviewed."}
 
 def stats(db, **kw):
     idx,ids,pre=filter_result(db,**kw)
@@ -269,8 +313,9 @@ def stats(db, **kw):
             "contrast_note":f"{unique_primary[t]} apparently unique displayed submissions and {clustered_primary[t]} displayed repeated-cluster units raise this as a provisional primary topic. These are not verified distinct arguments."})
     return {"version":VERSION,"mode":mode,"public_comment_submissions":3748,
             "displayed_units":len(ids),"matching_before_form_mode":len(pre),
-            "approximate_clusters_in_filtered_submissions":len(family_counts),
+            "approximate_clusters_in_filtered_submissions":len({idx["items"][cid]["cluster_id"] for cid in ids}),
             "status_counts":dict(statuses),"topics":concern_rows,
+            "support_review":support_review_summary(db,kw,idx) if kw.get("section")=="support" else None,
             "content_subcategories":[{"id":s,"label":label,"count":content_counts[s]} for s,label in SUBCATEGORIES.items()],
             "top_clusters":examples,
             "explanation":"Versioned deterministic source-excerpt and count contrasts under the selected filters. No paid AI or regenerated narrative. Form-letter grouping is not an adjudication of distinct substantive arguments.",
@@ -283,7 +328,7 @@ def export(db,**kw):
     w.writerow(["comment_id","source_url","cluster_id","cluster_size","form_letter_status",
                 "exact_duplicate","personalized","overlap","novel_words","needs_review",
                 "primary_topics","secondary_topics","content_subcategories","support_specific_measure","management_categories",
-                "v107_rules_version","public_corpus_records"])
+                "feedback_rules_version","public_corpus_records"])
     for cid in ids:
         x=idx["items"][cid];row=idx["rows"][cid]
         mg_categories=idx.get("management_categories")

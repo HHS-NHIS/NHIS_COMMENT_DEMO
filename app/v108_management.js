@@ -57,7 +57,7 @@ function state(){
     form_mode:e('mgFormMode').value,v107_topic:topic.startsWith('v108__')?topic.slice(6):'',
     v107_tier:topic.startsWith('v108__')?e('mgTier').value:'any',
     v107_content:e('mgSection').value==='content'?e('mgContent').value:'',
-    q:e('mgQuery').value.trim(),
+    q:e('mgQuery').value.trim(),match:'phrase',
     questionnaire:e('mgSection').value==='questionnaire'?e('mgQuestionnaire').value:''};
 }
 function fillChoices(select,base,items,selected){
@@ -134,6 +134,9 @@ managementComments=async function(){
       '<p>Topic: '+esc(theme.replace(/\s\(\d+\)$/,''))+'. '+
       'Form-letter mode: '+esc(e('mgFormMode').selectedOptions[0].textContent)+
       '. These are screen-based counts and source excerpts, not a new AI-written narrative or counts of people.</p>'+
+      (query.section==='support'&&d.support_review?
+          '<p class="footnote"><strong>'+number(d.support_review.count)+'</strong> possible measure-support statements are flagged separately for review (not included in Support totals). '+
+          (d.support_review.example_ids||[]).slice(0,5).map(cid=>'<button class="tag open-detail" data-id="'+esc(cid)+'">'+esc(cid)+' ↗</button>').join(' ')+'</p>':'')+
       '<h4>Primary substantive topics in this selection</h4>'+
       (primary.length?primary.map(x=>'<p><strong>'+esc(x.label)+'</strong>: '+
         number(x.primary)+' primary, '+number(x.secondary)+' incidental; '+

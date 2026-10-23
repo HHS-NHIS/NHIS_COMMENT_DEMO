@@ -90,7 +90,7 @@ def feedback_options(q, management_view=False):
     return dict(mode=q.get('form_mode','all'), section=q.get('section','') if management_view else '',
         legacy_theme='' if extra_topic else selected, topic=extra_topic or q.get('v107_topic',''),
         tier=q.get('v107_tier','any'), subcategory=q.get('v107_content',''),
-        query=q.get('q',''), match=q.get('match','any'),
+        query=q.get('q',''), match=q.get('match','phrase' if management_view else 'any'),
         questionnaire=q.get('questionnaire',''))
 
 def feedback_requested(q):
