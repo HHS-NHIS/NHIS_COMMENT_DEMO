@@ -103,5 +103,6 @@ class AdditionalCorpusTests(unittest.TestCase):
   self.assertEqual(f.qc(self.db)["display_counts"]["representative"],886)
  def test_false_medications_major_cluster(self):
   item=f.index(self.db)["items"]["CDC-2026-1387-0324"]
+  print("MEDICATION_QC_EXCERPT",repr(item["topics"].get("medications",{}).get("evidence","")),flush=True)
   self.assertNotIn("medications",[k for k,v in item["topics"].items() if v["role"]=="primary"])
 
