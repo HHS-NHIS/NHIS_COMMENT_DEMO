@@ -27,7 +27,8 @@ Frozen corpus: 3,748 public-comment records. Original compressed database, Docke
 - Modified browser script compiled with JavaScript parser; HTML div and section structure balanced.
 - Checked all existing navigation entries and established API route names remain in the feature branch.
 - Dockerfile, original management module, theme definitions and 3,748-snapshot manifest are byte-identical to the archived base.
-- IMPORTANT: The full legacy test suite timed out when run on the historical V9.7 package, and the new branch has not yet passed an end-to-end HTTP/browser smoke test against the actual 3,748-record database. The feature branch is a **review candidate, not a release-ready build**.
+- **GitHub full-corpus technical QC PASS**: [Actions run 40000804195](https://github.com/HHS-NHIS/NHIS_COMMENT_DEMO/actions/runs/40000804195) verified the 3,748 release, compiled all Python code, passed six new facet unit tests, and passed read-only hosted HTTP smoke covering preserved routes, all form modes, management/term filters, WPHI IDs 0414/0428/0518 and filtered CSV alignment. A complete browser-interaction acceptance pass and SME assessment of the new provisional topic/intent labels are still necessary before production use.
+- Historical V9.4–V9.7 tests hardcode the obsolete 1,693 count and cannot be applied as-is to V10.6. The full historical suite timed out locally; 14 selected baseline regressions passed. The new smoke explicitly asserts the current 3,748 record count.
 
 ## Deployment policy
 Do not merge this branch into main or redeploy the existing Railway full dashboard until it passes an isolated staging build, all preserved-export comparisons, management-filter and WPHI regression tests, and a human review of potentially ambiguous primary vs incidental labels. Do not delete/pause the current Railway projects before the new full app is verified.
