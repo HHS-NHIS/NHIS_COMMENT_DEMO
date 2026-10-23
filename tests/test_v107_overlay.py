@@ -104,6 +104,8 @@ class CorpusTests(unittest.TestCase):
             actual=self.idx["items"][cid]["content_subcategories"]
             if subcategory not in actual:mismatches.append((cid,subcategory,actual))
         self.assertFalse(mismatches,"Mandatory content examples must be investigated: "+repr(mismatches))
+        self.assertNotIn("reduce",self.idx["items"]["CDC-2026-1387-0261"]["content_subcategories"],
+            "Concern about agency removal is not an endorsement of reducing content")
 
     def test_measure_specific_support(self):
         for suffix in ("0414","0428","0518"):
