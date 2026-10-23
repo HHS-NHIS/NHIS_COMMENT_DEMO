@@ -43,7 +43,7 @@ ASSOCIATION = re.compile(r"\b(?:associated with|linked to|correlat(?:es|ed|ion)|
 SENTENCES = re.compile(r"(?<=[.!?])\s+|\n+")
 # Retaining something is not evidence of a removal concern unless an actual or
 # proposed deletion is identified. This excludes broad "keep" form-letter language.
-REMOVAL_CONTEXT = re.compile(r"\b(?:remov(?:e|ed|al|ing)|eliminat\w*|dropp?(?:ed|ing)?|deleted?|discontinu\w*|cut(?:ting|s)?|propos\w*.{0,60}?(?:reduc\w*|remov\w*|delet\w*)|reduc(?:ed|tion|ing)\s+(?:of|in)\b)\b",re.I)
+REMOVAL_CONTEXT = re.compile(r"\b(?:(?:not carried forward|no longer included|not included in the proposed|left out of the proposed|omitted from the proposed)|remov(?:e|ed|al|ing)|eliminat\w*|dropp?(?:ed|ing)?|deleted?|discontinu\w*|cut(?:ting|s)?|propos\w*.{0,60}?(?:reduc\w*|remov\w*|delet\w*)|reduc(?:ed|tion|ing)\s+(?:of|in)\b)\b",re.I)
 MEASURE_SUBJECT = re.compile(r"\b(?:questions?|items?|measures?|topics?|content|modules?|sections?|survey|nhis|lonel\w*|disabilit\w*|help|marijuana|cannabis|insurance|access)\b",re.I)
 ADDITION = re.compile(r"\b(?:add|additional|new (?:question|measure|topic)|introduc|expand|incorporat|should be included|should include|include (?:a|the)\s+(?:new|brief)|follow.up identifying)\w*\b",re.I)
 REDUCE = re.compile(r"\b(?:delete|eliminat|remove|drop|omit|not be asked|reduce (?:the |existing )?(?:questions|items|content)|shorten)\w*\b",re.I)
