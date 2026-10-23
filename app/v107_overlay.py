@@ -103,6 +103,9 @@ def index(db):
             "SELECT comment_id,title,organization,plain_text,normalized_sha,posted_date,comment_url FROM comments ORDER BY comment_id")}
         if len(rows)!=3748:
             raise ValueError("V10.7 frozen corpus gate: expected 3748 public records")
+        attachment_text=defaultdict(list)
+        for x in db.execute("SELECT comment_id,text FROM attachment_text WHERE status='ok'"):
+            if x["text"]:attachment_text[x["comment_id"]].append(x["text"])
         clusters={r["comment_id"]:dict(r) for r in db.execute("SELECT * FROM comment_clusters")}
         if set(rows)!=set(clusters):
             raise ValueError("V10.7 cluster coverage mismatch")
@@ -112,7 +115,7 @@ def index(db):
         items={}
         for cid,r in rows.items():
             c=clusters[cid]
-            text=r["plain_text"] or ""
+            text=(r["plain_text"] or "")+"\n\n"+"\n\n".join(attachment_text.get(cid,[]))
             analyzed=classify_text(text,r["title"] or "")
             exact=bool(r["normalized_sha"] and hashes[r["normalized_sha"]]>1)
             size=c["cluster_size"]
