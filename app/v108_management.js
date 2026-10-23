@@ -74,6 +74,8 @@ async function refreshOptions(refresh=true){
   try{
     const r=await api('/api/v108/management-options?'+new URLSearchParams(prior));
     if(id!==facetReq||!active())return;
+    const summaryChoice=e('mgSection').querySelector('option[value="summary"]');
+    if(summaryChoice){summaryChoice.textContent='All management categories (Summary)';e('mgSection').insertBefore(summaryChoice,e('mgSection').firstChild);}
     const content=e('mgContent'),selectedContent=prior.v107_content;
     const showContent=prior.section==='content';
     content.closest('label').classList.toggle('isHidden',!showContent);

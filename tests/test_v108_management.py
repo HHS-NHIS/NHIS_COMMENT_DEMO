@@ -15,6 +15,7 @@ class UITests(unittest.TestCase):
   self.assertIn("All recommendation types",html)
   self.assertIn("All topics / measures",js)
   self.assertIn("Original V10.6 syntheses",js)
+  self.assertIn("All management categories (Summary)",js)
 @unittest.skipUnless((ROOT/"data/comments.sqlite3").is_file(),"requires unpacked release data")
 class CorpusTests(unittest.TestCase):
  @classmethod
