@@ -24,7 +24,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from local_analysis import local_models, answer as local_answer, compare_theme
 import management_addon as management  # additive, read-only reporting; no existing route overrides
-import v107_overlay as feedback  # V10.7 immutable feedback index
+import v107_overlay as feedback  # versioned read-only feedback index
 from core import (connect as core_connect, import_data, metadata, theme_summary, all_themes, list_comments,
                   theme_details, save_override, response_review, export_report, DB_PATH,
                   source_status, sync_from_folder, analysis_qc, management_html, save_analyst_review,
@@ -342,7 +342,7 @@ class Handler(BaseHTTPRequestHandler):
                             t['unfiltered_count']=t['count']
                             t['count']=len(idx['themes'].get(t['id'],set()) & selections)
                         base.sort(key=lambda x:(-x['count'],x['name']))
-                        self._json({'themes':base,'method':'V10.7 filtered displayed-unit counts; legacy counts retained in unfiltered_count; provisional screening only.'})
+                        self._json({'themes':base,'method':'V10.8.2 filtered displayed-unit counts; legacy counts retained in unfiltered_count; provisional screening only.'})
                     else:self._json({'themes':theme_summary(db),'method':'Unvalidated keyword-screening tags; review before management use.'})
             elif path=='/api/comments':
                 with closing(connect()) as db:
@@ -495,8 +495,8 @@ def main():
         if READ_ONLY: assert_search_index_complete(db)
         if HOSTED:
             v107=feedback.qc(db)
-            if not v107['ready']:raise SystemExit('V10.7 regression gate failed: '+str(v107))
-            print('V10.7 feedback gate:',v107['version'],v107['display_counts'])
+            if not v107['ready']:raise SystemExit('V10.8.2 regression gate failed: '+str(v107))
+            print('V10.8.2 feedback gate:',v107['version'],v107['display_counts'])
         else: ensure_search_index(db)
         print('Local database:',DB_PATH,'records:',metadata(db)['records'])
     if HOSTED and not PUBLIC_DEMO and (not os.environ.get('DEMO_USER') or len(os.environ.get('DEMO_PASSWORD',''))<16):

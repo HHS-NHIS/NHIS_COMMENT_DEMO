@@ -101,7 +101,12 @@ class AdditionalCorpusTests(unittest.TestCase):
   idx=f.index(self.db)
   codes=["CDC-2026-1387-"+k for k in ("0308","0334","0335")]
   self.assertEqual(len({idx["items"][i]["cluster_id"] for i in codes}),1)
-  self.assertEqual(f.qc(self.db)["display_counts"]["representative"],886)
+  self.assertEqual(f.qc(self.db)["display_counts"]["representative"],882)
+  self.assertEqual(len(idx["cross_cluster_edges"]),6)
+  self.assertTrue(all(idx["items"][i]["cross_cluster_review"] for i in codes))
+  unrelated=["CDC-2026-1387-1804","CDC-2026-1387-2370"]
+  self.assertEqual(len({idx["items"][i]["cluster_id"] for i in unrelated}),1)
+  self.assertNotEqual(idx["items"]["CDC-2026-1387-0042"]["cluster_id"],idx["items"][codes[0]]["cluster_id"])
  def test_false_medications_major_cluster(self):
   item=f.index(self.db)["items"]["CDC-2026-1387-0324"]
   self.assertNotIn("medications",[k for k,v in item["topics"].items() if v["role"]=="primary"])

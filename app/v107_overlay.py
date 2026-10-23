@@ -1,4 +1,4 @@
-"""V10.7 additive, deterministic management-feedback index.
+"""Versioned additive, deterministic management-feedback index.
 
 Read-only overlay over the frozen V10.6 SQLite and versioned management artifact.
 Never rewrites the original 3,748 records, legacy tags or precompiled narratives.
@@ -7,11 +7,13 @@ No external services, AI, personal data collection, or paid inference.
 import csv
 import io
 import re
+import difflib
+import itertools
 import sqlite3
 import threading
 from collections import Counter, defaultdict
 
-VERSION = "v10.8.1-management-qc-20261023"
+VERSION = "v10.8.2-topic-focus-and-generic-clustering-20261023"
 MODES = ("all", "representative", "exclude_clusters")
 TOPICS = {
     "tobacco": ("Tobacco, nicotine, and cigarettes", r"\b(?:tobacco|nicotine|cigarettes?|cigars?|smoking|smokers?|e-cigarettes?|vaping|vapes?)\b"),
@@ -66,8 +68,34 @@ def direct_request(sentence, pattern):
             return True
     return False
 
+def is_substantive_sentence(s):
+    """Skip greetings and section headings when testing a letter's opening focus."""
+    return len(re.findall(r"[a-zA-Z]{2,}",s))>=6
+
+def topic_focus(sentences,pattern,hits):
+    """Promote a substantive focused topic even without an explicit request verb.
+
+    The opening signal requires measure/health-question framing, not a generic
+    background mention of a condition or another survey topic.
+    """
+    substantive=[s for s in sentences if is_substantive_sentence(s)]
+    if not substantive:return None
+    hit_count=sum(bool(pattern.search(s)) for s in substantive)
+    if hit_count>=2 and hit_count/len(substantive)>=0.5:
+        return "dominant_topic"
+    first=substantive[0]
+    if not pattern.search(first):return None
+    evaluation=re.search(r"\b(?:valuable|essential|crucial|critical|important|effective|beneficial|useful|validated|necessar\w*|vital|indispensable|key|significant|concern\w*)\b",first,re.I)
+    survey_measure=re.search(r"\b(?:NHIS|survey|questionnaire|measures?|questions?|items?|index|screening|health data)\b",first,re.I)
+    if evaluation and survey_measure and not ASSOCIATION.search(first):
+        return "opening_measure_focus"
+    named_measure=bool(re.search(r"\bindex\b|\b(?:NHIS|survey|questionnaire)\b.{0,45}\b(?:measures?|questions?|items?)\b",first,re.I))
+    if len(substantive)<=6 and named_measure and not ASSOCIATION.search(first):
+        return "opening_named_measure"
+    return None
+
 def classify_text(text, title=""):
-    """Deterministic high-precision topical screening; flag rather than force weak cases."""
+    """Source-grounded topic role: explicit survey request OR documented focus."""
     text=(text or "")[:160000]
     sentences=[s.strip() for s in SENTENCES.split(text) if s.strip()]
     labels={}
@@ -77,10 +105,12 @@ def classify_text(text, title=""):
         if not hits and not pat.search(title or ""):
             continue
         substantive=[s for s in hits if direct_request(s,pat)]
-        role="primary" if substantive else "secondary"
+        focus=topic_focus(sentences,pat,hits) if not substantive else None
+        rule="explicit_request" if substantive else (focus or "incidental_mention")
+        role="primary" if rule!="incidental_mention" else "secondary"
         evidence=(substantive or hits or [title or ""])[0][:330]
         labels[tid]={"label":name,"role":role,"evidence":evidence,
-                     "mentions":len(hits),"method":"v10.8.1 direct-request context screening"}
+                     "mentions":len(hits),"method":"v10.8.2 "+rule}
     subs=[]
     for sentence in sentences:
         if WORDING.search(sentence): subs.append("wording")
@@ -110,6 +140,64 @@ def classify_text(text, title=""):
             "support_scope":"specific_measure_not_redesign" if support_explicit or support_review else "",
             "multiple_primary_review":many_primary}
 
+def normalized_form_words(text):
+    return re.findall(r"[a-z0-9]+",(text or "").casefold())[:2400]
+
+def propose_cluster_links(clusters,rows):
+    """Generic, conservatively linked form-letter variants; no comment IDs hardcoded.
+
+    Candidate: shared 14-word sequences in different original clusters.
+    Confirmation: >=40 consecutive shared words, >=70% of shorter text,
+    shorter document length >=60% of longer document length.
+    All linked records are flagged for review; underlying SQLite is immutable.
+    """
+    original=defaultdict(list)
+    for cid,c in clusters.items():original[c["cluster_id"]].append(cid)
+    reps={}
+    for group,members in original.items():
+        candidates=sorted(members,key=lambda cid:len(rows[cid]["plain_text"] or ""))
+        selection=[candidates[0],candidates[len(candidates)//2],candidates[-1]]
+        if len(candidates)>100:
+            selection=[candidates[len(candidates)//4],candidates[len(candidates)//2],candidates[3*len(candidates)//4]]
+        reps[group]=list({cid:normalized_form_words(rows[cid]["plain_text"]) for cid in selection}.values())
+    postings=defaultdict(set)
+    for group,docs in reps.items():
+        for words in docs:
+            for i in range(len(words)-13):postings[tuple(words[i:i+14])].add(group)
+    votes=Counter()
+    for owners in postings.values():
+        if 2<=len(owners)<=12:
+            for pair in itertools.combinations(sorted(owners),2):votes[pair]+=1
+    parent={g:g for g in original}
+    def root(g):
+        while parent[g]!=g:
+            parent[g]=parent[parent[g]]
+            g=parent[g]
+        return g
+    edges=[]
+    for (a,b),votes_count in sorted(votes.items()):
+        if votes_count<27:continue
+        accepted=False;best_length=0;best_cover=0
+        for sa in reps[a]:
+            for sb in reps[b]:
+                if not sa or not sb:continue
+                shorter=min(len(sa),len(sb));longer=max(len(sa),len(sb))
+                if shorter/longer<0.60:continue
+                block=difflib.SequenceMatcher(None,sa,sb,autojunk=False).find_longest_match(0,len(sa),0,len(sb)).size
+                cover=block/shorter
+                if block>=40 and cover>=0.70:
+                    accepted=True;best_length=max(best_length,block);best_cover=max(best_cover,cover)
+        if not accepted:continue
+        ra,rb=root(a),root(b)
+        if ra!=rb:parent[max(ra,rb)]=min(ra,rb)
+        edges.append({"source_cluster":a,"matched_cluster":b,
+                      "common_contiguous_words":best_length,"shorter_text_coverage":round(best_cover,3)})
+    components=defaultdict(list)
+    for old in original:components[root(old)].append(old)
+    canonical={old:min(group) for group in components.values() for old in group}
+    flagged={old for group in components.values() if len(group)>1 for old in group}
+    return canonical,flagged,edges
+
 _lock = threading.RLock()
 _cached = None
 
@@ -128,18 +216,13 @@ def index(db):
         clusters={r["comment_id"]:dict(r) for r in db.execute("SELECT * FROM comment_clusters")}
         if set(rows)!=set(clusters):
             raise ValueError("V10.7 cluster coverage mismatch")
-        # Additional independently flagged copies span three old cluster IDs.
-        # This is a *documented analytic link*, not a database overwrite.
-        linked=["CDC-2026-1387-"+suffix for suffix in ("0308","0334","0335")]
-        if not all(cid in clusters for cid in linked):
-            raise ValueError("Expected linked form-letter example missing")
-        original_group_ids={clusters[cid]["cluster_id"] for cid in linked}
-        representative=clusters[linked[0]]["cluster_id"]
+        # Evidence-based template links, with original frozen clusters preserved.
+        linked_groups,cross_cluster_review,cross_cluster_edges=propose_cluster_links(clusters,rows)
         for cid,c in clusters.items():
-            c["original_cluster_id"]=c["cluster_id"]
-            c["cross_cluster_review"]=c["cluster_id"] in original_group_ids
-            if c["cross_cluster_review"]:
-                c["cluster_id"]=representative
+            old=c["cluster_id"]
+            c["original_cluster_id"]=old
+            c["cross_cluster_review"]=old in cross_cluster_review
+            c["cluster_id"]=linked_groups[old]
         hashes=Counter(r["normalized_sha"] for r in rows.values() if r["normalized_sha"])
         members=defaultdict(list)
         for cid,c in clusters.items():members[c["cluster_id"]].append(cid)
@@ -172,7 +255,7 @@ def index(db):
                 "original_cluster_id":c["original_cluster_id"],"cross_cluster_review":c["cross_cluster_review"],
                 "method":("Exact normalized-text fingerprint" if exact else
                           "Existing five-word shingle cluster with novel-text flag" if size>1 else
-                          "No existing near-duplicate cluster; unique only within frozen corpus")}
+                          "No identified near-duplicate cluster; unique only within frozen corpus")}
         themes=defaultdict(set)
         semantic_themes=defaultdict(set)
         for cid,tid in db.execute("SELECT comment_id,theme_id FROM tags"):
@@ -181,7 +264,7 @@ def index(db):
             semantic_themes[tid].add(cid)
         allids=set(rows)
         _cached={"rows":rows,"items":items,"members":dict(members),"search_text":full_search,"themes":dict(themes),
-                 "allids":allids,"cluster_count":len(members),"semantic_themes":dict(semantic_themes)}
+                 "allids":allids,"cluster_count":len(members),"cross_cluster_edges":cross_cluster_edges,"semantic_themes":dict(semantic_themes)}
         return _cached
 
 def filter_result(db, mode="all", section="", legacy_theme="", topic="", tier="any",
@@ -329,7 +412,7 @@ def export(db,**kw):
     out=io.StringIO(newline="")
     w=csv.writer(out)
     w.writerow(["comment_id","source_url","cluster_id","cluster_size","form_letter_status",
-                "exact_duplicate","personalized","overlap","novel_words","needs_review",
+                "exact_duplicate","personalized","overlap","novel_words","needs_review","original_cluster_id","cross_cluster_review",
                 "primary_topics","secondary_topics","content_subcategories","support_specific_measure","management_categories",
                 "feedback_rules_version","public_corpus_records"])
     for cid in ids:
@@ -346,7 +429,7 @@ def export(db,**kw):
             idx["management_categories"]=mg_categories
         w.writerow([cid,row["comment_url"],x["cluster_id"],x["cluster_size"],x["form_status"],
              int(x["exact_duplicate"]),int(x["personalized"]),x["overlap"],x["novel_words"],
-             int(x["needs_review"])," | ".join(t for t,v in x["topics"].items() if v["role"]=="primary"),
+             int(x["needs_review"]),x["original_cluster_id"],int(x["cross_cluster_review"])," | ".join(t for t,v in x["topics"].items() if v["role"]=="primary"),
              " | ".join(t for t,v in x["topics"].items() if v["role"]=="secondary"),
              " | ".join(x["content_subcategories"]),x["support_specific_measure"]," | ".join(mg_categories.get(cid,[])),VERSION,3748])
     return out.getvalue().encode("utf-8-sig")
@@ -364,7 +447,7 @@ def qc(db):
     return {"ready":passed,"version":VERSION,"corpus":3748,"original_ai_labels_preserved":True,
             "original_management_artifact_unchanged":True,"example_ids_checked":len(EXAMPLES)-len(missing),
             "missing_examples":missing,"display_counts":all_counts,
-            "cluster_count":idx["cluster_count"],"multiple_primary_topic_comments":len(multi),
+            "cluster_count":idx["cluster_count"],"cross_cluster_links_review_required":idx["cross_cluster_edges"],"multiple_primary_topic_comments":len(multi),
             "note":"Presence is a regression gate. Classifications are provisional, require human QC; examples are not hard-coded labels."}
 
 

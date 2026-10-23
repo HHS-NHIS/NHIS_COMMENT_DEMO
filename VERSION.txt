@@ -1,7 +1,7 @@
-NHIS Comment Intelligence public demo
-Version: V9.6 reproducibility and documentation QC — 2026-10-20
-Snapshot: 1,693 publicly indexed comment records; AI assignments provisional.
-No login, no runtime paid OpenAI calls.
-Existing AI classifications unchanged.
-
-V9.7: provisional source-based subject and request summaries for form-letter groups in Corpus QC, comment detail, and two CSV exports. No database or AI label changes.
+NHIS 2028 Redesign Public Comment Intelligence — read-only public release
+Version: V10.8.2 (2026-10-23) — topic-focus and cross-cluster screening correction
+Public source: Regulations.gov docket CDC-2026-1387, 3,748 publicly indexed comments.
+Management reporting: eight nonexclusive categories; 15 additional deterministic topics; all provisional and not human-adjudicated.
+Form-letter treatments: all submissions, representative per inferred text cluster, exclude clustered submissions. Additional template links are flagged for review, never persisted to the frozen source database.
+Existing V10.6 management prose and downloadable Word reports are full-corpus historical references and are not regenerated under selected filters.
+No login, database writes, or paid model calls in hosted mode.
