@@ -38,7 +38,7 @@ SUBCATEGORIES = {
     "ambiguous": "Unclear restoration versus addition — review",
 }
 # A condition mention or a general reference to NHIS is not a request for that measure.
-ACTION = re.compile(r"\b(?:recommend(?:ation|ed)?|suggest(?:ion|ed)?|propos\w*|urge|support(?:ed|ing)?|endorse\w*|retain|keep|restore|reinstat\w*|include|add|collect|measure|ask|question|revise|change|modify|drop|remove|eliminat\w*|should|must|need)\b", re.I)
+ACTION = re.compile(r"\b(?:recommend(?:ation|ed)?|suggest(?:ion|ed)?|propos\w*|urge|support(?:ed|ing)?|endorse\w*|retain|keep|restore|reinstat\w*|include|add|collect|measure|ask|revise|change|modify|drop|remove|eliminat\w*|should|must|need)\b", re.I)
 ASSOCIATION = re.compile(r"\b(?:associated with|linked to|correlat(?:es|ed|ion)|risk factor for|co.?occur|such as|including higher rates of|higher levels of)\b",re.I)
 SENTENCES = re.compile(r"(?<=[.!?])\s+|\n+")
 # Retaining something is not evidence of a removal concern unless an actual or
