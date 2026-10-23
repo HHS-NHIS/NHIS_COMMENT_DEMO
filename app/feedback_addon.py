@@ -125,12 +125,26 @@ def summary(index,ids,mode='all',topic='',relevance='any',action=''):
         ids={cid for cid in ids if action in index['actions'][cid]}
     included=select_ids(index,ids,mode)
     count=Counter(index['flags'][cid]['status'] for cid in ids)
+    # Dynamic, source-grounded screening digest for this exact filtered record set.
+    # Not an AI-generated narrative and never substituted for management synthesis.
+    primary=Counter()
+    evid=defaultdict(list)
+    for cid in sorted(included):
+        for code,v in index['topics'][cid].items():
+            if v['relevance']=='primary':
+                primary[code]+=1
+                if len(evid[code])<3:evid[code].append(cid)
+    names={code:name for code,name,_ in TOPICS}
+    top=[{'id':code,'name':names[code],'comment_records':n,'evidence_ids':evid[code]}
+         for code,n in primary.most_common(8)]
+    action_counts=Counter(code for cid in included for code in index['actions'][cid])
     return {'total_submissions':len(ids),'matching_records':len(included),
             'approximate_distinct_groups':len({index['flags'][cid]['cluster_id'] for cid in ids}),
             'exact_repeated_text':count['exact_repeated_text'],
             'likely_form_letter':count['likely_form_letter'],'not_flagged':count['not_flagged'],
             'personalized_in_matching':sum(index['flags'][cid]['personalized'] for cid in ids),
-            'mode':mode,'ids':sorted(included),
+            'mode':mode,'ids':sorted(included),'top_primary_topics':top,
+            'content_action_screen':dict(action_counts),
             'limitations':'All labels are provisional screening. Excluding form-letter groups may omit substantive personal additions. Original submission counts are preserved.'}
 
 def filtered_csv(db,index,ids,mode='all',topic='',relevance='any',action=''):
