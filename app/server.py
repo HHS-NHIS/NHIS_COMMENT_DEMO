@@ -24,10 +24,11 @@ from urllib.parse import parse_qs, urlsplit
 
 from local_analysis import local_models, answer as local_answer, compare_theme
 import management_addon as management  # additive, read-only reporting; no existing route overrides
+import feedback_addon as feedback  # read-only, no inference calls
 from core import (connect as core_connect, import_data, metadata, theme_summary, all_themes, list_comments,
                   theme_details, save_override, response_review, export_report, DB_PATH,
                   source_status, sync_from_folder, analysis_qc, management_html, save_analyst_review,
-                  rebuild_derived, ensure_derived_current, cluster_subjects)
+                  rebuild_derived, ensure_derived_current, cluster_subjects, filtered_ids, FIELDS, to_csv)
 
 ASSETS=Path(__file__).resolve().parent
 MAX_BODY_BYTES=(80*1024 if os.getenv('NHIS_DEPLOYMENT_MODE','local').lower()=='hosted' else 75*1024*1024)
@@ -301,10 +302,104 @@ class Handler(BaseHTTPRequestHandler):
                 self._response(management.REPORT.read_bytes(),
                   ctype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                   extra={'Content-Disposition':'attachment; filename="nhis_management_classification_report.docx"'})
+            elif path=='/api/feedback/options':
+                with closing(connect()) as db:
+                    idx=feedback.get_index(db)
+                    self._json({'topics':[{'id':a,'name':b} for a,b,_ in feedback.TOPICS],
+                      'actions':[{'id':a,'name':b} for a,b,_ in feedback.ACTIONS]+[{'id':'unclear','name':'Unclear / needs staff review'}],
+                      'corpus':feedback.summary(idx,idx['flags']),
+                      'method':'Provisional lexical and repeated-text screening; not independently validated.'})
+            elif path in ('/api/feedback/records','/api/feedback/export'):
+                with closing(connect()) as db:
+                    idx=feedback.get_index(db)
+                    section=q.get('section','')
+                    if section and section not in management.ALLOWED:
+                        self._json({'error':'Unknown management section'},400);return
+                    ids=set(idx['flags'])
+                    if section:
+                        state=management.load(db)
+                        if not state['ready']:
+                            self._json({'error':'Management classifications unavailable'},409);return
+                        if section=='summary':
+                            pass
+                        elif section=='questionnaire':
+                            requested=q.get('questionnaire','').strip()
+                            if len(requested)>100:self._json({'error':'Questionnaire filter too long'},400);return
+                            ids={a['comment_id'] for a in state['assignments']
+                                 if a.get('questionnaire_section') and
+                                 (not requested or requested in
+                                  [p.strip() for p in a.get('questionnaire_section','').split(' | ')])}
+                        else:
+                            ids={a['comment_id'] for a in state['assignments'] if a['category']==section}
+                            if section=='support':ids|=idx['measure_support']
+                    theme=q.get('theme','')
+                    if theme:
+                        if theme not in {r[0] for r in db.execute('SELECT DISTINCT theme_id FROM semantic_tags')}:
+                            self._json({'error':'Unknown AI theme'},400);return
+                        ids&={r[0] for r in db.execute('SELECT comment_id FROM semantic_tags WHERE theme_id=?',(theme,))}
+                    search=q.get('q','').strip().casefold()
+                    if len(search)>300:self._json({'error':'Search too long'},400);return
+                    if search:
+                        matches={r[0] for r in db.execute('SELECT comment_id,plain_text,title,organization FROM comments')
+                                 if any(search in (part or '').casefold() for part in (r[1],r[2],r[3]))}
+                        try:
+                            matches|={r[0] for r in db.execute("SELECT comment_id,text FROM attachment_text WHERE status='ok'")
+                                       if search in (r[1] or '').casefold()}
+                        except sqlite3.OperationalError:pass
+                        ids&=matches
+                    mode=q.get('form_mode','all');topic=q.get('topic','')
+                    relevance=q.get('relevance','any');action=q.get('content_action','')
+                    try: stats=feedback.summary(idx,ids,mode,topic,relevance,action)
+                    except ValueError as ex:self._json({'error':str(ex)},400);return
+                    if path.endswith('/export'):
+                        data=feedback.filtered_csv(db,idx,ids,mode,topic,relevance,action,section)
+                        self._response(data,ctype='text/csv; charset=utf-8',
+                         extra={'Content-Disposition':'attachment; filename="NHIS_FORM_TOPIC_SCREENING.csv"'})
+                        return
+                    page=max(1,min(int(q.get('page','1')),100000))
+                    size=max(1,min(int(q.get('size','20')),100))
+                    selected=stats.pop('ids')[(page-1)*size:page*size]
+                    rows=[]
+                    for cid in selected:
+                        row=dict(db.execute('''SELECT c.comment_id,c.title,c.organization,c.posted_date,
+                         c.comment_url,substr(c.plain_text,1,900) AS excerpt,
+                         cl.cluster_size FROM comments c LEFT JOIN comment_clusters cl
+                         ON cl.comment_id=c.comment_id WHERE c.comment_id=?''',(cid,)).fetchone())
+                        row['form_flag']=idx['flags'][cid]['status']
+                        row['form_personalized']=idx['flags'][cid]['personalized']
+                        row['new_topics']=idx['topics'][cid]
+                        row['content_actions']=idx['actions'][cid]
+                        row['supports_measure']=cid in idx['measure_support']
+                        try:
+                            review=db.execute('''SELECT management_low_confidence,
+                               management_low_confidence_reasons,management_review_status
+                               FROM coded_comments_final WHERE comment_id=?''',(cid,)).fetchone()
+                        except sqlite3.OperationalError:review=None
+                        if review:
+                            row.update({'management_low_confidence':review[0],
+                                'management_low_confidence_reasons':review[1],
+                                'management_review_status':review[2]})
+                        rows.append(row)
+                    stats.update({'rows':rows,'total':stats['matching_records'],'page':page,
+                       'page_size':size,'support_measure_overlay':section=='support',
+                       'narrative_scope':'Saved management narratives and 240 theme intersections describe the original full corpus. New filters do NOT regenerate them.'})
+                    self._json(stats)
             elif path=='/api/themes':
                 with closing(connect()) as db:self._json({'themes':theme_summary(db),'method':'Unvalidated keyword-screening tags; review before management use.'})
             elif path=='/api/comments':
-                with closing(connect()) as db:self._json(list_comments(db,theme=q.get('theme'),phrase=q.get('q'),query_mode=q.get('match','any'),page=int(q.get('page',1)),size=int(q.get('size',20))))
+                if q.get('form_mode','all')=='all':
+                    with closing(connect()) as db:self._json(list_comments(db,theme=q.get('theme'),phrase=q.get('q'),query_mode=q.get('match','any'),page=int(q.get('page',1)),size=int(q.get('size',20))))
+                else:
+                    with closing(connect()) as db:
+                        try:
+                            ids=filtered_ids(db,theme=q.get('theme'),phrase=q.get('q'),query_mode=q.get('match','any'))
+                            ids=sorted(feedback.select_ids(feedback.get_index(db),ids,q.get('form_mode','all')))
+                        except ValueError as ex:self._json({'error':str(ex)},400);return
+                        page=max(1,int(q.get('page',1)));size=max(1,min(int(q.get('size',20)),100))
+                        selected=ids[(page-1)*size:page*size]
+                        rows=[dict(db.execute('SELECT * FROM comments WHERE comment_id=?',(cid,)).fetchone()) for cid in selected]
+                        for row in rows:row.pop('normalized_sha',None)
+                        self._json({'total':len(ids),'page':page,'comments':rows})
             elif path.startswith('/api/comment/'):
                 cid=path[len('/api/comment/'):]
                 with closing(connect()) as db:
@@ -326,7 +421,14 @@ class Handler(BaseHTTPRequestHandler):
             elif path=='/api/export':
                 kind=q.get('kind','')
                 with closing(connect()) as db:
-                    csv=export_report(db,kind,theme=q.get('theme'),phrase=q.get('q'),query_mode=q.get('match','any'))
+                    if kind=='query_matches' and q.get('form_mode','all')!='all':
+                        try:
+                            selected=filtered_ids(db,theme=q.get('theme'),phrase=q.get('q'),query_mode=q.get('match','any'))
+                            ids=sorted(feedback.select_ids(feedback.get_index(db),selected,q.get('form_mode','all')))
+                        except ValueError as ex:self._json({'error':str(ex)},400);return
+                        csv=to_csv(FIELDS,[dict(db.execute('SELECT '+','.join(FIELDS)+' FROM comments WHERE comment_id=?',(cid,)).fetchone()) for cid in ids])
+                    else:
+                        csv=export_report(db,kind,theme=q.get('theme'),phrase=q.get('q'),query_mode=q.get('match','any'))
                     prefix='SYNTHETIC_TEST_' if metadata(db)['mode']=='synthetic demo' else ''
                 self._response(csv,ctype='text/csv; charset=utf-8',extra={'Content-Disposition':f'attachment; filename="{prefix}nhis_{kind}.csv"'})
             elif path in ('/','/index.html','/style.css','/app.js'):
