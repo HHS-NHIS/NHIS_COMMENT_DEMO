@@ -76,6 +76,29 @@ openDetail=async function(cid){
       ' · '+esc(x.method)+(x.needs_review?' · Flagged for review':'')+'</p></div>');
   }catch(e){/* Original source detail remains available when additive annotation cannot load. */}
 };
+// Management historical narratives stay frozen; only the following source evidence is filtered.
+const v107BaseManagementComments=managementComments;
+let v107ManagementSignalsReq=0;
+managementComments=async function(){
+  const n=++v107ManagementSignalsReq;
+  await v107BaseManagementComments();
+  const section=$('mgSection').value,theme=$('mgTheme').value;
+  const message=section==='support'
+    ? 'The V10.6 support narrative and 240 original intersections exclude newly screened support for a specific measure. V10.7 filtered record counts below may include measure-specific support; ambiguous statements remain flagged for human review.'
+    : 'V10.6 section and category × theme prose covers the original full cohort. Changing form-letter, topic, or search filters DOES NOT regenerate those legacy narratives or their cited counts.';
+  $('v107ManagementScope').textContent=message;
+  try{
+    const q=urlParams({...v107Params(),section,theme,q:$('mgQuery').value,questionnaire:section==='questionnaire'?$('mgQuestionnaire').value:''});
+    const d=await api('/api/v107/stats?'+q);
+    if(n!==v107ManagementSignalsReq)return;
+    $('v107ManagementSignals').innerHTML=d.topics.filter(x=>x.primary>0||x.secondary>0).sort((a,b)=>b.primary-a.primary).slice(0,15).map(t=>
+      '<div class="management-rule-row"><strong>'+esc(t.label)+'</strong><span>'+
+      'Primary '+number(t.primary)+' (apparently unique '+number(t.primary_apparently_unique)+
+      '; repeated-cluster units '+number(t.primary_clustered)+'); incidental '+number(t.secondary)+
+      '. Examples: '+esc(t.example_ids.join(', '))+'</span></div>').join('')
+      ||'<p>No additional-topic rule matches in this view.</p>';
+  }catch(e){if(n===v107ManagementSignalsReq)$('v107ManagementSignals').textContent='Filtered signals unavailable: '+e.message;}
+};
 document.addEventListener('DOMContentLoaded',()=>{
   const controls=['v107Mode','v107Topic','v107Tier','v107Content'];
   for(const k of controls)$(k).onchange=v107Changed;
