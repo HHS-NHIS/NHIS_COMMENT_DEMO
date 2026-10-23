@@ -1,0 +1,36 @@
+name: NHIS Feedback Branch QC
+on:
+  push:
+    branches:
+      - feature/feedback-form-topic-facets-20261023
+jobs:
+  feedback-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      NHIS_DEPLOYMENT_MODE: hosted
+      NHIS_PUBLIC_DEMO: "1"
+      NHIS_READ_ONLY: "1"
+      NHIS_ALLOW_PUBLIC_PROVISIONAL: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify frozen 3,748-comment payload and Python syntax
+        run: |
+          python scripts/unpack_payload.py
+          python scripts/verify_public_release.py
+          python -m compileall -q app scripts tests
+      - name: Run feedback and legacy focused tests
+        run: |
+          python -m unittest discover -s tests -p 'test_feedback_v107.py' -v
+          python -m unittest discover -s tests -p 'test_public_v94.py' -v
+          python -m unittest discover -s tests -p 'test_v96_release.py' -v
+          python -m unittest discover -s tests -p 'test_v97_subject_labels.py' -v
+      - name: Hosted API full corpus smoke
+        run: |
+          python app/server.py --no-browser --port 8767 > /tmp/nhis-feedback-server.log 2>&1 &
+          echo $! > /tmp/nhis-feedback.pid
+          trap 'cat /tmp/nhis-feedback-server.log; kill $(cat /tmp/nhis-feedback.pid) 2>/dev/null || true' EXIT
+          python tests/smoke_feedback_http.py
