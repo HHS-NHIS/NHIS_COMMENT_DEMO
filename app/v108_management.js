@@ -164,6 +164,11 @@ window.addEventListener('DOMContentLoaded',()=>{
     e(id).onchange=()=>apply();
   }
   e('mgApply').onclick=()=>apply();
+  e('mgReset').onclick=()=>{
+    e('mgSection').value='summary';e('mgTheme').value='';e('mgContent').value='';
+    e('mgTier').value='any';e('mgFormMode').value='all';e('mgQuery').value='';
+    e('mgQuestionnaire').value='';apply();
+  };
   e('mgQuery').onkeydown=event=>{if(event.key==='Enter')apply();};
   e('mgDownloadCSV').onclick=()=>{
     window.location.href='/api/management/export?'+new URLSearchParams(state());

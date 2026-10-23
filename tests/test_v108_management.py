@@ -9,7 +9,7 @@ class UITests(unittest.TestCase):
   html=(ROOT/"app/index.html").read_text()
   js=(ROOT/"app/v108_management.js").read_text()
   self.assertIn('class="panel hide" id="v107GlobalPanel"',html)
-  for name in ("mgSection","mgTheme","mgContent","mgTier","mgFormMode","mgQuery"):
+  for name in ("mgSection","mgTheme","mgContent","mgTier","mgFormMode","mgQuery","mgReset"):
    self.assertIn('id="'+name+'"',html)
   self.assertIn("All submissions",html)
   self.assertIn("All recommendation types",html)
