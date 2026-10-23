@@ -91,6 +91,25 @@ class FullDashboardHTTPT(unittest.TestCase):
         self.assertIn("v107",data)
         self.assertEqual(data["v107"]["support_specific_measure"],"explicit")
 
+    def test_evidence_search_shared_mode_filters(self):
+        def ask(mode):
+            payload={"question":"loneliness","model":"","approved":False,
+                     "v107":{"form_mode":mode,"v107_topic":"","v107_tier":"any","v107_content":""}}
+            req=Request(self.url+"/api/local/query",data=json.dumps(payload).encode("utf-8"),
+                       headers={"Content-Type":"application/json"},method="POST")
+            with urlopen(req,timeout=30) as response:
+                self.assertEqual(response.status,200)
+                return json.loads(response.read())
+        original=ask("all")
+        representative=ask("representative")
+        excluded=ask("exclude_clusters")
+        self.assertGreaterEqual(original["match_count"],representative["match_count"])
+        self.assertGreaterEqual(representative["match_count"],excluded["match_count"])
+        for d in (original,representative,excluded):
+            self.assertEqual(d["total_records"],3748)
+            self.assertIsNone(d.get("llm_summary"))
+            self.assertIn("V10.7 mode",d["qualifier"])
+
     def test_security_read_only_paid_off_and_origin_guard(self):
         url=self.url+"/api/override"
         req=Request(url,data=b'{"comment_id":"CDC-2026-1387-0414","theme_id":"sleep","decision":1}',
