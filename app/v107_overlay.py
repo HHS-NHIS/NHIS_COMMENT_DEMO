@@ -110,6 +110,9 @@ def classify_text(text, title=""):
             "support_scope":"specific_measure_not_redesign" if support_explicit or support_review else "",
             "multiple_primary_review":many_primary}
 
+_lock = threading.RLock()
+_cached = None
+
 def index(db):
     """Immutable hosted snapshot index, built once and held in memory."""
     global _cached
