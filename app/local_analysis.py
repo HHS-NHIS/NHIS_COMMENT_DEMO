@@ -253,7 +253,7 @@ def suggested_themes(concept_list):
     return (strong + weak)[:4]
 
 
-def retrieve(db, question, theme_id='', limit=EVIDENCE_LIMIT):
+def retrieve(db, question, theme_id='', limit=EVIDENCE_LIMIT, feedback_filter=None):
     """Counts are strictly database counts (FTS phrase/token matches or the selected screening theme).
 
     These are not semantic/exhaustive topic prevalence estimates.
@@ -264,9 +264,29 @@ def retrieve(db, question, theme_id='', limit=EVIDENCE_LIMIT):
         raise ValueError('Unknown selected theme.')
     ensure_search_index(db)
     cmap = cluster_map(db)
+    def v107_pick(source_ids):
+        if feedback_filter is None:return source_ids
+        import v107_overlay as feedback
+        opts=feedback_filter
+        mode=opts.get('form_mode','all')
+        idx,eligible,_=feedback.filter_result(db,mode='all',topic=opts.get('v107_topic',''),
+                             tier=opts.get('v107_tier','any'),subcategory=opts.get('v107_content',''))
+        allowed=set(eligible)
+        matched=[cid for cid in source_ids if cid in allowed]
+        if mode=='exclude_clusters':
+            matched=[cid for cid in matched if idx['items'][cid]['cluster_size']==1]
+        elif mode=='representative':
+            seen=set();picked=[]
+            for cid in matched:
+                grp=idx['items'][cid]['cluster_id']
+                if grp in seen:continue
+                seen.add(grp);picked.append(cid)
+            matched=picked
+        elif mode!='all':raise ValueError('Invalid form-letter mode')
+        return matched
     any_count = None
     if theme_id:
-        ids = filtered_ids(db, theme=theme_id)
+        ids = v107_pick(filtered_ids(db, theme=theme_id))
         n = len(ids)
         if cons:
             ftsquery = ' OR '.join(_fts_term(c) for c in cons)
@@ -281,15 +301,21 @@ def retrieve(db, question, theme_id='', limit=EVIDENCE_LIMIT):
             raise ValueError('Please enter specific topic words or choose a theme.')
         all_expr = ' AND '.join(_fts_term(c) for c in cons)
         any_expr = ' OR '.join(_fts_term(c) for c in cons)
-        matched = [r['comment_id'] for r in db.execute('SELECT comment_id FROM local_fts WHERE local_fts MATCH ? ORDER BY bm25(local_fts,0.0,0.7,0.3,1.0),comment_id', (all_expr,))]
+        matched = v107_pick([r['comment_id'] for r in db.execute('SELECT comment_id FROM local_fts WHERE local_fts MATCH ? ORDER BY bm25(local_fts,0.0,0.7,0.3,1.0),comment_id', (all_expr,))])
         n = len(matched)
-        any_count = db.execute('SELECT COUNT(*) FROM local_fts WHERE local_fts MATCH ?', (any_expr,)).fetchone()[0]
+        if feedback_filter is None:
+            any_count = db.execute('SELECT COUNT(*) FROM local_fts WHERE local_fts MATCH ?', (any_expr,)).fetchone()[0]
+        else:
+            any_count = len(v107_pick([r['comment_id'] for r in db.execute('SELECT comment_id FROM local_fts WHERE local_fts MATCH ?', (any_expr,))]))
         # Do not blend OR-only matches into evidence for an ALL-concept question. Those
         # passages can be about an entirely different concern and mislead the LLM.
         ranked_ids = diverse_ids(db, matched, limit, cmap)
         method = 'lexical_full_corpus_search'
         qualifier = ('Count = records containing ALL search concepts (Porter-stemmed, phrases kept together); '
                      'a reproducible lexical screen, not a verified count of people expressing the concept. Synonyms and context may be missed.')
+    if feedback_filter is not None:
+        qualifier += (' V10.7 mode '+str(feedback_filter.get('form_mode','all'))+
+             ': evidence, distinct groups, and counts follow the selected form-letter and topical filters. Source corpus stays 3,748.')
     matched_set = set(matched)
     distinct = len({cmap.get(c, {}).get('cluster_id', c) for c in matched_set})
     records = []
@@ -547,8 +573,8 @@ SYSTEM_SUMMARY = ('You are an analyst summarizing PUBLIC comments on a federal s
                   'If the evidence is insufficient, say so. Do not claim the excerpts represent the entire corpus.')
 
 
-def answer(db, question, theme_id='', model='', approved=False):
-    retrieved = retrieve(db, question, theme_id)
+def answer(db, question, theme_id='', model='', approved=False, feedback_filter=None):
+    retrieved = retrieve(db, question, theme_id, feedback_filter=feedback_filter)
     if not model:
         return retrieved
     if not retrieved['evidence']:
