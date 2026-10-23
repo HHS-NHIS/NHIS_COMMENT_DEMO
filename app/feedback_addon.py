@@ -89,6 +89,20 @@ def build_index(db):
         if measure_support(text):measure.add(cid)
     return {'flags':flags,'topics':topics,'actions':actions,'measure_support':measure}
 
+
+# Hosted snapshots are immutable. Cache screening once per process to keep filters fast.
+# Mutable local sessions deliberately re-read the database after each import.
+_CACHED=None
+def get_index(db):
+    global _CACHED
+    import os
+    immutable=(os.environ.get('NHIS_DEPLOYMENT_MODE','local')=='hosted' or
+               os.environ.get('NHIS_READ_ONLY','0')=='1')
+    if immutable and _CACHED is not None:return _CACHED
+    answer=build_index(db)
+    if immutable:_CACHED=answer
+    return answer
+
 def select_ids(index,ids,mode='all'):
     if mode not in MODES:raise ValueError('Unknown repeated-submission mode')
     ids=set(ids); flags=index['flags']
