@@ -96,6 +96,7 @@ class AdditionalCorpusTests(unittest.TestCase):
    self.assertNotIn("CDC-2026-1387-"+code,allsupport)
   self.assertIn("CDC-2026-1387-0414",allsupport)
   self.assertLess(len(allsupport),110,"Weak support rule has inflated the category")
+  print("QC_REVIEW_COUNTS support="+str(len(allsupport))+" removed="+str(len(f.filter_result(self.db,section="content",subcategory="removed")[1]))+" med_primary="+str(f.stats(self.db,mode="all")["topics"][[x["id"] for x in f.stats(self.db,mode="all")["topics"]].index("medications")]["primary"]),flush=True)
  def test_linked_near_duplicates(self):
   idx=f.index(self.db)
   codes=["CDC-2026-1387-"+k for k in ("0308","0334","0335")]
@@ -103,6 +104,5 @@ class AdditionalCorpusTests(unittest.TestCase):
   self.assertEqual(f.qc(self.db)["display_counts"]["representative"],886)
  def test_false_medications_major_cluster(self):
   item=f.index(self.db)["items"]["CDC-2026-1387-0324"]
-  print("MEDICATION_QC_EXCERPT",repr(item["topics"].get("medications",{}).get("evidence","")),flush=True)
   self.assertNotIn("medications",[k for k,v in item["topics"].items() if v["role"]=="primary"])
 
