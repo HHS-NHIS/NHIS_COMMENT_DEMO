@@ -81,8 +81,11 @@ class FullDashboardHTTPT(unittest.TestCase):
 
     def test_support_examples_in_filtered_management_export(self):
         csv=self.get("/api/management/export?section=support&form_mode=all&v107_topic=whole_person")[1].decode("utf-8-sig")
-        for code in ("0414","0428","0518"):
-            self.assertIn("CDC-2026-1387-"+code,csv)
+        self.assertIn("CDC-2026-1387-0414",csv)
+        for code in ("0428","0518"):
+            self.assertNotIn("CDC-2026-1387-"+code,csv)
+        stats=json.loads(self.get("/api/v107/stats?section=support&v107_topic=whole_person&form_mode=all")[1])
+        self.assertGreaterEqual(stats["support_review"]["count"],2)
 
     def test_old_and_new_source_detail_and_provisional_labels(self):
         data=json.loads(self.get("/api/comment/CDC-2026-1387-0414")[1])
