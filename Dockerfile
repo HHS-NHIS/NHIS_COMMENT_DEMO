@@ -7,12 +7,13 @@ COPY scripts/semantic_classify.py ./scripts/semantic_classify.py
 COPY scripts/unpack_payload.py ./scripts/unpack_payload.py
 COPY scripts/verify_public_release.py ./scripts/verify_public_release.py
 COPY tests/test_v107_overlay.py ./tests/test_v107_overlay.py
+COPY tests/test_v107_http.py ./tests/test_v107_http.py
 COPY themes.json ./themes.json
 COPY form_letter_subjects.json ./form_letter_subjects.json
 COPY payload_parts/ ./payload_parts/
 RUN python scripts/unpack_payload.py \
     && python scripts/verify_public_release.py \
-    && python -m unittest discover -v -s tests -p test_v107_overlay.py \
+    && python -m unittest discover -v -s tests -p 'test_v107_*.py' \
     && rm -rf payload_parts data/comments.sqlite3.xz \
     && chown -R nhisdemo:nhisdemo /app/data
 USER nhisdemo
