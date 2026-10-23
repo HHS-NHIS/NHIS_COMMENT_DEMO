@@ -302,6 +302,69 @@ class Handler(BaseHTTPRequestHandler):
                 self._response(management.REPORT.read_bytes(),
                   ctype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                   extra={'Content-Disposition':'attachment; filename="nhis_management_classification_report.docx"'})
+            elif path=='/api/feedback/options':
+                with closing(connect()) as db:
+                    idx=feedback.get_index(db)
+                    self._json({'topics':[{'id':a,'name':b} for a,b,_ in feedback.TOPICS],
+                      'actions':[{'id':a,'name':b} for a,b,_ in feedback.ACTIONS]+[{'id':'unclear','name':'Unclear / needs staff review'}],
+                      'corpus':feedback.summary(idx,idx['flags']),
+                      'method':'Provisional lexical and repeated-text screening; not independently validated.'})
+            elif path in ('/api/feedback/records','/api/feedback/export'):
+                with closing(connect()) as db:
+                    idx=feedback.get_index(db)
+                    section=q.get('section','')
+                    if section and section not in management.ALLOWED:
+                        self._json({'error':'Unknown management section'},400);return
+                    ids=set(idx['flags'])
+                    if section:
+                        state=management.load(db)
+                        if not state['ready']:
+                            self._json({'error':'Management classifications unavailable'},409);return
+                        if section=='summary':
+                            pass
+                        elif section=='questionnaire':
+                            ids={a['comment_id'] for a in state['assignments'] if a.get('questionnaire_section')}
+                        else:
+                            ids={a['comment_id'] for a in state['assignments'] if a['category']==section}
+                            if section=='support':ids|=idx['measure_support']
+                    theme=q.get('theme','')
+                    if theme:
+                        if theme not in {r[0] for r in db.execute('SELECT DISTINCT theme_id FROM semantic_tags')}:
+                            self._json({'error':'Unknown AI theme'},400);return
+                        ids&={r[0] for r in db.execute('SELECT comment_id FROM semantic_tags WHERE theme_id=?',(theme,))}
+                    search=q.get('q','').strip().casefold()
+                    if len(search)>300:self._json({'error':'Search too long'},400);return
+                    if search:
+                        ids&={r[0] for r in db.execute('SELECT comment_id,plain_text,title,organization FROM comments')
+                              if any(search in (part or '').casefold() for part in (r[1],r[2],r[3]))}
+                    mode=q.get('form_mode','all');topic=q.get('topic','')
+                    relevance=q.get('relevance','any');action=q.get('content_action','')
+                    try: stats=feedback.summary(idx,ids,mode,topic,relevance,action)
+                    except ValueError as ex:self._json({'error':str(ex)},400);return
+                    if path.endswith('/export'):
+                        data=feedback.filtered_csv(db,idx,ids,mode,topic,relevance,action)
+                        self._response(data,ctype='text/csv; charset=utf-8',
+                         extra={'Content-Disposition':'attachment; filename="NHIS_FORM_TOPIC_SCREENING.csv"'})
+                        return
+                    page=max(1,min(int(q.get('page','1')),100000))
+                    size=max(1,min(int(q.get('size','20')),100))
+                    selected=stats.pop('ids')[(page-1)*size:page*size]
+                    rows=[]
+                    for cid in selected:
+                        row=dict(db.execute('''SELECT c.comment_id,c.title,c.organization,c.posted_date,
+                         c.comment_url,substr(c.plain_text,1,900) AS excerpt,
+                         cl.cluster_size FROM comments c LEFT JOIN comment_clusters cl
+                         ON cl.comment_id=c.comment_id WHERE c.comment_id=?''',(cid,)).fetchone())
+                        row['form_flag']=idx['flags'][cid]['status']
+                        row['form_personalized']=idx['flags'][cid]['personalized']
+                        row['new_topics']=idx['topics'][cid]
+                        row['content_actions']=idx['actions'][cid]
+                        row['supports_measure']=cid in idx['measure_support']
+                        rows.append(row)
+                    stats.update({'rows':rows,'total':stats['matching_records'],'page':page,
+                       'page_size':size,'support_measure_overlay':section=='support',
+                       'narrative_scope':'Saved management narratives and 240 theme intersections describe the original full corpus. New filters do NOT regenerate them.'})
+                    self._json(stats)
             elif path=='/api/themes':
                 with closing(connect()) as db:self._json({'themes':theme_summary(db),'method':'Unvalidated keyword-screening tags; review before management use.'})
             elif path=='/api/comments':
