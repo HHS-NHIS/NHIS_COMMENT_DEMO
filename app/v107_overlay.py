@@ -130,13 +130,14 @@ def index(db):
                           "Existing five-word shingle cluster with novel-text flag" if size>1 else
                           "No existing near-duplicate cluster; unique only within frozen corpus")}
         themes=defaultdict(set)
+        semantic_themes=defaultdict(set)
         for cid,tid in db.execute("SELECT comment_id,theme_id FROM tags"):
             themes[tid].add(cid)
         for cid,tid in db.execute("SELECT comment_id,theme_id FROM semantic_tags"):
-            themes[tid].add(cid)
+            semantic_themes[tid].add(cid)
         allids=set(rows)
         _cached={"rows":rows,"items":items,"members":dict(members),"themes":dict(themes),
-                 "allids":allids,"cluster_count":len(members)}
+                 "allids":allids,"cluster_count":len(members),"semantic_themes":dict(semantic_themes)}
         return _cached
 
 def filter_result(db, mode="all", section="", legacy_theme="", topic="", tier="any",
@@ -162,8 +163,9 @@ def filter_result(db, mode="all", section="", legacy_theme="", topic="", tier="a
             if section=="support":
                 ids |= {cid for cid,x in idx["items"].items() if x["support_specific_measure"] in ("explicit","review")}
     if legacy_theme:
-        if legacy_theme not in idx["themes"]:raise ValueError("Unknown original AI theme")
-        ids &= idx["themes"][legacy_theme]
+        active_themes=idx["semantic_themes"] if section else idx["themes"]
+        if legacy_theme not in active_themes:raise ValueError("Unknown original AI theme")
+        ids &= active_themes[legacy_theme]
     if topic:
         ids &= {cid for cid,item in idx["items"].items() if
                 topic in item["topics"] and (tier=="any" or item["topics"][topic]["role"]==tier)}
@@ -258,15 +260,25 @@ def export(db,**kw):
     w=csv.writer(out)
     w.writerow(["comment_id","source_url","cluster_id","cluster_size","form_letter_status",
                 "exact_duplicate","personalized","overlap","novel_words","needs_review",
-                "primary_topics","secondary_topics","content_subcategories","support_specific_measure",
+                "primary_topics","secondary_topics","content_subcategories","support_specific_measure","management_categories",
                 "v107_rules_version","public_corpus_records"])
     for cid in ids:
         x=idx["items"][cid];row=idx["rows"][cid]
+        mg_categories=idx.get("management_categories")
+        if mg_categories is None:
+            import management_addon as mg
+            state=mg.load(db)
+            if not state["ready"]:raise ValueError("Management artifact unavailable for export")
+            mg_categories=defaultdict(list)
+            for a in state["assignments"]:
+                if a["category"] not in mg_categories[a["comment_id"]]:
+                    mg_categories[a["comment_id"]].append(a["category"])
+            idx["management_categories"]=mg_categories
         w.writerow([cid,row["comment_url"],x["cluster_id"],x["cluster_size"],x["form_status"],
              int(x["exact_duplicate"]),int(x["personalized"]),x["overlap"],x["novel_words"],
              int(x["needs_review"])," | ".join(t for t,v in x["topics"].items() if v["role"]=="primary"),
              " | ".join(t for t,v in x["topics"].items() if v["role"]=="secondary"),
-             " | ".join(x["content_subcategories"]),x["support_specific_measure"],VERSION,3748])
+             " | ".join(x["content_subcategories"]),x["support_specific_measure"]," | ".join(mg_categories.get(cid,[])),VERSION,3748])
     return out.getvalue().encode("utf-8-sig")
 
 EXAMPLES=[
