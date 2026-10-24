@@ -406,7 +406,22 @@ def stats(db, **kw):
                     "excerpt":idx["items"][cid]["topics"][t]["evidence"][:180]} for cid in repeated[:2]],
             "contrast_version":VERSION,
             "contrast_note":f"{unique_primary[t]} apparently unique displayed submissions and {clustered_primary[t]} displayed repeated-cluster units raise this as a provisional primary topic. These are not verified distinct arguments."})
+    pair=None
+    t1,t2=kw.get("topic",""),kw.get("topic2","")
+    if t1 and t2:
+        base={k:v for k,v in kw.items() if k not in ("topic","topic2","mode")}
+        _,cohort,_=filter_result(db,mode="all",topic="",topic2="",**base)
+        a={cid for cid in cohort if t1 in idx["items"][cid]["topics"] and
+           (kw.get("tier","any")=="any" or idx["items"][cid]["topics"][t1]["role"]==kw["tier"])}
+        b={cid for cid in cohort if t2 in idx["items"][cid]["topics"] and
+           (kw.get("tier","any")=="any" or idx["items"][cid]["topics"][t2]["role"]==kw["tier"])}
+        both=len(a & b);un=len(a | b);smaller=min(len(a),len(b))
+        pair={"topic_a":t1,"topic_b":t2,"a_count":len(a),"b_count":len(b),
+              "both":both,"pct_of_smaller":round(100*both/smaller,1) if smaller else 0,
+              "jaccard":round(100*both/un,1) if un else 0,
+              "denominator":"Distinct submissions matching other filters before the two added-topic filters"}
     return {"version":VERSION,"mode":mode,"public_comment_submissions":3748,
+            "topic_intersection":pair,
             "displayed_units":len(ids),"matching_before_form_mode":len(pre),
             "approximate_clusters_in_filtered_submissions":len({idx["items"][cid]["cluster_id"] for cid in ids}),
             "status_counts":dict(statuses),"topics":concern_rows,
