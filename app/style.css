@@ -96,3 +96,9 @@ body.hosted.private-preview #tab-review>article.panel{display:none!important}
 #tab-management #mgTopicOverlap{margin:14px 0;padding:12px;background:#f5f8f6;border-radius:9px}
 #tab-management #mgFormAudit{margin-top:20px}
 @media(max-width:760px){#tab-management details.mg-reference .management-rule-row{grid-template-columns:minmax(0,1fr)}}
+
+/* V10.10.1: long management export labels must not force horizontal scrolling */
+#tab-management .actions{min-width:0;max-width:100%}
+#tab-management .actions .button{max-width:100%;min-width:0;white-space:normal;overflow-wrap:anywhere;word-break:normal;text-align:center;line-height:1.4}
+#tab-impact{max-width:100%;min-width:0}#impactIssuesFrame{max-width:100%}
+@media(max-width:730px){#tab-management .actions{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}#tab-management .actions .button{display:block;width:100%;max-width:100%;white-space:normal}}

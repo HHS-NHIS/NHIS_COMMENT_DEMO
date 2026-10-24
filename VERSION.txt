@@ -9,3 +9,5 @@ No login, database writes, or paid model calls in hosted mode.
 V10.9 Management Analysis combines the earlier management sections, original AI themes, 15 management-requested topics, optional two-topic intersection, form-letter identification, conditional Content types, source evidence, and historical reports. The frozen source and precompiled prose remain unchanged.
 
 V10.10 embeds a separate read-only, AI-assisted 201-issue/1,464-recommendation ledger based on 3,748 public comments. All issue priority scores and source-specific form-letter counts are provisional and methodologically distinct. The frozen SQLite corpus, management coding, and historical reports remain unchanged.
+
+V10.10.1 (2026-10-24): release documentation and tests, source-ledger date/terminology, local fonts, and mobile export wrapping. Source corpus, topic coding and precompiled reports unchanged.

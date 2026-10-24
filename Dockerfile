@@ -14,6 +14,7 @@ COPY VERSION.txt ./VERSION.txt
 COPY tests/test_v1082.py ./tests/test_v1082.py
 COPY tests/test_v109_unified.py ./tests/test_v109_unified.py
 COPY tests/test_v110_impact.py ./tests/test_v110_impact.py
+COPY tests/test_v111_release_docs.py ./tests/test_v111_release_docs.py
 COPY form_letter_subjects.json ./form_letter_subjects.json
 COPY payload_parts/ ./payload_parts/
 RUN python scripts/unpack_payload.py \
@@ -23,6 +24,7 @@ RUN python scripts/unpack_payload.py \
     && python -m unittest discover -v -s tests -p 'test_v1082.py' \
     && python -m unittest discover -v -s tests -p 'test_v109_*.py' \
     && python -m unittest discover -v -s tests -p 'test_v110_*.py' \
+    && python -m unittest discover -v -s tests -p 'test_v111_*.py' \
     && rm -rf payload_parts data/comments.sqlite3.xz \
     && chown -R nhisdemo:nhisdemo /app/data
 USER nhisdemo
