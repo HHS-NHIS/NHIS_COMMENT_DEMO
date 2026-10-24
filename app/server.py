@@ -179,7 +179,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header('Content-Type',ctype)
         self.send_header('X-Content-Type-Options','nosniff')
-        self.send_header('X-Frame-Options','SAMEORIGIN' if embedded else 'DENY')
+        # Ordinary dashboard responses cannot be framed; the isolated issue ledger
+        # uses frame-ancestors 'self' (CSP) because its sandbox has an opaque origin.
+        if not embedded: self.send_header('X-Frame-Options','DENY')
         self.send_header('Referrer-Policy','no-referrer')
         if embedded:
             # Restrict the supplied, static issue ledger to a sandboxed same-site frame.
