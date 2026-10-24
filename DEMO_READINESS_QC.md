@@ -1,53 +1,38 @@
-# NHIS Comment Intelligence — V9.6 public-demo QC (20 October 2026)
+# NHIS Comment Intelligence — V10.10.1 Readiness and QC
 
-## Current deployment snapshot
-- Public, no login, read-only, with **paid OpenAI functionality disabled**.
-- 1,693 comment records; 1,693 have saved provisional model-coding records, of which 60 list attachments.
-- 65 attachment documents have extraction/transcription status recorded; two include photograph-only content. Original materials must still be checked before quoting or describing coverage as verified.
-- Keyword themes and AI theme assignments are **not independently human validated**. The 1,333 near-duplicate/form-letter records affect frequency interpretation. Published AI theme-frequency charts intentionally remain withheld.
-- Public website: https://nhis-comment-demo-production.up.railway.app
-- Public source repository: https://github.com/HHS-NHIS/NHIS_COMMENT_DEMO
+> This is the QC report for the [V10.10.1 release branch](https://github.com/HHS-NHIS/NHIS_COMMENT_DEMO/tree/release/v10-10-1-release-qc-cleanup-20261024), **not** the historical `main` source snapshot. Switch to that release branch before running the versioned checks.
 
-## V9.4 corrections
-1. Removed leftover password-gate and paid-API wording from the public interface.
-2. Corrected outdated text claiming only 20/65 attachments had extraction, or that all 60 attachment-bearing comments lacked AI coding.
-3. Removed nonfunctional theme-editing and analyst-review controls from the read-only comment detail dialog. The original local analyst edition can still edit.
-4. Clarified evidence-only operation and preliminary classification warnings.
-5. Repackaged the local SQLite database from the exact compressed snapshot used for Docker/Railway, eliminating a local WAL-mode mismatch.
-6. Added public-demo endpoint and deployment-mode tests.
 
-## Verification performed
-- `python -m unittest discover -s tests -q`: **173 tests passed**.
-- `node --check app/app.js`: passed.
-- `python scripts/verify_dashboard.py`: passed, with 1,693 unique IDs and zero orphan attachment/tag rows.
-- Hosted-mode HTTP smoke tests: `/`, JavaScript and CSS, `/api/meta`, `/api/themes`, `/api/qc`, `/api/source`, `/api/comments`, individual comment details, `/api/semantic/status`, review and assignment CSVs, standard CSV export, QC briefing and evidence-only POST all return HTTP 200.
-- Edit/draft/paid endpoints return HTTP 403. Wrong-origin evidence POST returns HTTP 400. 24 simultaneous assignment CSV downloads returned identical hashes.
-- Public browser automation was attempted but the execution environment blocked localhost navigation. A visual sign-off from a real external browser remains recommended.
+**Date:** October 24, 2026. **Docket:** CDC-2026-1387. **Frozen public API inventory:** 3,748 unique publicly posted/indexed comment IDs as of October 21, 2026. The inventory must not be represented as the total number of comments received.
 
-## Not certified and not a technical launch blocker
-- Agency approval for public hosting of preliminary analysis on Railway/GitHub (not equivalent to code QC).
-- Independent human coding / disagreement adjudication / template-based estimates.
-- Validity and completeness of manually transcribed / OCR'd attachments relative to original public documents.
-- Fresh reconciliation of 1,693 publicly posted indexed records to the docket's submissions-received total.
+## Release scope
 
-**Interpretation:** A functioning exploratory demo, not an official CDC finding or a certified statistical estimate.
+- **Existing core dashboard and Management Analysis preserved.** Eight management headings, 30 original AI themes, 15 additional topics, five Content request types, Primary/Secondary role screening, form-letter flags, source excerpts, exports, and full-corpus historical reports.
+- **Issue Prioritization** remains a separate read-only ledger with 201 issues, 1,464 recommendations and 815 directly cited distinct comment IDs. Quotations and scoring calculations are QC-checked, but interpretive 1–5 scores and category choices have not been independently validated.
+- **Corpus QC** retains the frozen older cluster summary: 48 repeated groups covering 2,908 submitted records; the other 840 are singletons (888 original approximate groups).
+- **Management Analysis** uses generalized V10.8.2 template links: **45 inferred repeated groups (2,911 submissions) plus 837 singletons = 882 inferred text groups**. Six cross-group links are flagged provisional; the frozen source records remain all 3,748.
 
-## V9.5 public wording / Claude Q C (2026-10-20)
+## Reproducible technical checks
 
-Verified three Claude-assisted image-derived attachment texts in the snapshot, corrected README and UI provenance wording, hid consent prompts in public evidence mode with CSS and JavaScript, removed outdated template-QC timeline language while retaining unvalidated-model warning, and updated fresh-clone test instructions. No AI labels or raw data were modified. The database consistency test finds identical labels within 53 exact-content groups (710 records), but thematic accuracy remains unvalidated; the public AI-frequency chart remains withheld.
+Use **`python scripts/run_release_qc.py`** from a fresh Python 3.12+ checkout. It expands the chunked public corpus, validates the public dataset, full-text index, report hashes and eight management headings, then runs `test_v107_*`, `test_v108_*`, `test_v1082.py`, `test_v109_*`, `test_v110_*` and `test_v111_*`. Docker performs the same release gate. Do not rely on older 1,693-comment pilot-era tests or documentation.
 
-## October 20 V9.6 reproducibility follow-up
-- Documented received-submission observations (2,012 on Oct 19; 3,048 reported Oct 20) without equating them with the 1,693 publicly posted/indexed comment records in this snapshot. Live 3,048 value has not been independently verified from this environment.
-- Added a deterministic blinded AI-label pilot (477 theme/comment pairs), private answer-key workflow and score --key compatibility; no analyst labels have been collected for this newer sample.
-- Added controlled master-to-public snapshot exporter and a seven-step update guide. Public source still excludes the private validation key.
-- Added conservative template-decision migration and full-cluster reassembly on changed/new members. This is a code safeguard, not an assertion that all future refreshes are cost-free; changed shared text may require new model work.
-- Existing AI counts are unaffected by this release; no new comments were retrieved or classified.
+Automated coverage: 3,748-source integrity; read-only and hosted API restrictions; source-linked evidence and original-theme versus added-topic intersections; management dropdown and export behavior; 45-group clustering checks and reviewer WPHI examples; all 1,464 ledger quotes matching public text (942 comment-body and 522 attachment-text); score arithmetic and issue IDs; current document wording, external-asset absence, and narrow-screen button wrapping.
 
-## V9.7 form-letter subject labeling (October 20, 2026)
+## Corrections in this maintenance release
 
-- Source-based, provisional editorial labels and one-sentence main-request descriptions were added for all **29** near-duplicate form-letter groups in this 1,693-record snapshot (1,333 clustered records).
-- The **Corpus QC → Possible form-letter groups** view now lists all 29 groups with labels, requests, representative excerpts, example comment IDs, and counts.
-- The **Data & exports → Form-letter clusters (summary)** CSV includes `subject`, `subject_summary`, `subject_source_id`, and `subject_status`; **Comment × form-letter cluster** CSV includes the same fields for each of 1,693 records (singletons explicitly marked not a form-letter group).
-- Individual comment detail pages show the group subject and description for clustered records.
-- Labels are editable through `form_letter_subjects.json`, separate from the immutable snapshot and 30 thematic categories; labels are not validated subject codes or evidence of organized campaigns.
-- Tests cover all 29 labels, the 993/236 leading groups, all 1,693 rows in the member export, database immutability, and hosted-mode API responses. No OpenAI requests or classification updates were made.
+1. Replaced outdated 1,693-record README and V9.6 readiness report. Current QA command uses all versioned release gates instead of stale pilot tests.
+2. Reconciled the distinct frozen Corpus QC and inferred Management Analysis form-letter definitions in both README and QC documentation.
+3. Corrected issue-ledger date/header to the October 21 public posting inventory and standardized ‘publicly posted/indexed’ terminology.
+4. Replaced a personal name in a narrative methodology example with source comment IDs, without modifying the underlying public source.
+5. Removed the Google Fonts request and related remote-font CSP permissions from the issue-ledger page.
+6. Updated the browser version title to V10.10.1 and added responsive wrapping for long management CSV/Word download buttons.
+7. Added regression tests to enforce these wording/layout/documentation decisions.
+
+## Not yet certified
+
+- Independent human adjudication of all classification decisions, issue scores and conservative cross-cluster matches.
+- Complete live-browser visual sign-off, especially on 390-pixel devices and networks blocking external assets; code-level responsive checks are not a substitute.
+- Independent review of underlying source attachments and any OCR for consequential quotations.
+- Agency authorization and suitability of the public hosting environment, which is not inferred from a passing software release gate.
+
+**This is an exploratory, provisional analysis of public records, not final findings or a statement of agency policy.**
