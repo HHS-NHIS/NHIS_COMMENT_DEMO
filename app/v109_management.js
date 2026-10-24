@@ -95,6 +95,7 @@ async function refreshFacets(renderIfChanged=true){
      content.closest('label').classList.toggle('hide',!visible);
      const changed4=choices(content,'All recommendation types',result.recommendation_types,
          visible?current.v107_content:'');
+     const changed5=choices(E('mgFormFlag'),'All comments',result.form_flag_choices,current.v109_form_flag);
      const tier=E('mgTier'),tierOn=Boolean(E('mgTopic').value||compared.value);
      tier.closest('label').classList.toggle('hide',!tierOn);
      tier.replaceChildren(new Option('All topic mentions','any'));
@@ -102,7 +103,7 @@ async function refreshFacets(renderIfChanged=true){
      const validRole=current.v107_tier==='any'||
        result.topic_roles.some(x=>x.id===current.v107_tier);
      tier.value=tierOn&&validRole?current.v107_tier:'any';
-     const changed=changed1||changed2||changed3||changed4||
+     const changed=changed1||changed2||changed3||changed4||changed5||
           (!validRole&&current.v107_tier!=='any');
      wasReset=wasReset||changed;
      E('mgIntegratedContext').textContent=
