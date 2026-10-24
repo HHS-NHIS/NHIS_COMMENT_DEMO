@@ -376,7 +376,7 @@ class Handler(BaseHTTPRequestHandler):
                          else export_report(db,kind,theme=q.get('theme'),phrase=q.get('q'),query_mode=q.get('match','any')))
                     prefix='SYNTHETIC_TEST_' if metadata(db)['mode']=='synthetic demo' else ''
                 self._response(csv,ctype='text/csv; charset=utf-8',extra={'Content-Disposition':f'attachment; filename="{prefix}nhis_{kind}.csv"'})
-            elif path in ('/','/index.html','/style.css','/app.js','/v107.js','/v108_management.js'):
+            elif path in ('/','/index.html','/style.css','/app.js','/v107.js','/v108_management.js','/v109_management.js'):
                 name='index.html' if path=='/' else path[1:]
                 mime=mimetypes.guess_type(name)[0] or 'application/octet-stream'
                 self._response((ASSETS/name).read_bytes(),ctype=mime)
