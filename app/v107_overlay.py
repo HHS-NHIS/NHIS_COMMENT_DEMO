@@ -281,8 +281,13 @@ def filter_result(db, mode="all", section="", legacy_theme="", topic="", tier="a
     if section:
         import management_addon as mg
         if section not in mg.ALLOWED:raise ValueError("Unknown management section")
-        state=mg.load(db)
-        if not state["ready"]:raise ValueError("Management artifact not ready")
+        # Frozen, read-only release: validate the expensive artifact once per process.
+        with _lock:
+            state=idx.get("verified_management_state")
+            if state is None:
+                state=mg.load(db)
+                if not state["ready"]:raise ValueError("Management artifact not ready")
+                idx["verified_management_state"]=state
         a=state["assignments"]
         if section=="questionnaire":
             ids &= {x["comment_id"] for x in a if x.get("questionnaire_section") and
@@ -362,7 +367,8 @@ def support_review_summary(db,kw,idx):
     settings={k:v for k,v in settings.items() if v is not None}
     _,candidates,_=filter_result(db,section="summary",mode="all",**settings)
     import management_addon as mg
-    existing={a["comment_id"] for a in mg.load(db)["assignments"] if a["category"]=="support"}
+    state=idx.get("verified_management_state") or mg.load(db)
+    existing={a["comment_id"] for a in state["assignments"] if a["category"]=="support"}
     ambiguous=sorted(cid for cid in candidates if idx["items"][cid]["support_specific_measure"]=="review" and cid not in existing)
     return {"count":len(ambiguous),"example_ids":ambiguous[:10],
             "note":"Potential specific-measure support; NOT included in Support totals until reviewed."}
@@ -445,7 +451,7 @@ def export(db,**kw):
         mg_categories=idx.get("management_categories")
         if mg_categories is None:
             import management_addon as mg
-            state=mg.load(db)
+            state=idx.get("verified_management_state") or mg.load(db)
             if not state["ready"]:raise ValueError("Management artifact unavailable for export")
             mg_categories=defaultdict(list)
             for a in state["assignments"]:
