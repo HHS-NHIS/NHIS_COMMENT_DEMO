@@ -20,7 +20,7 @@ function sourceState(){
 function params(q){return new URLSearchParams(q).toString();}
 v107Params=function(){
  if(!isManagement())return oldParams();
- return sourceState();
+ return {...sourceState(),form_mode:E("mgFormAudit")?.open?(E("mgAuditMode")?.value||"all"):"all"};
 };
 showTab=function(tab){
  if(tab==='feedback')tab='management';
@@ -52,7 +52,12 @@ function setup(){
  '<p class="footnote">Source submissions are never deleted. A likely form-letter flag is based on repeated or near-duplicate text. Review personalized variants and inferred links before deciding that substantive arguments are duplicates.</p>';
  const legacy=E('tab-feedback').querySelector('article.panel');
  if(legacy){while(legacy.firstChild)audit.appendChild(legacy.firstChild);}
+ const tool=document.createElement('div');tool.className='formrow';
+ tool.innerHTML='<label><span>Cluster audit display</span><select id="mgAuditMode"><option value="all">All matching comments</option><option value="representative">One representative per inferred group</option><option value="exclude_clusters">Only comments outside identified groups</option></select></label>'+
+ '<p class="footnote">Audit only: representative groups (882 overall) and unclustered submissions (837 overall) are different units. The main analyst results always count selected submissions.</p>';
+ audit.insertBefore(tool,audit.children[2]||null);
  E('tab-management').appendChild(audit);
+ E('mgAuditMode').onchange=()=>{if(audit.open)v107Render();};
  audit.addEventListener('toggle',()=>{if(audit.open)v107Render();});
  E('mgNarrativeTitle').textContent='Filtered Management Analysis';
  const themeIntro=E('mgTheme').closest('.formrow');
@@ -205,7 +210,7 @@ window.addEventListener('DOMContentLoaded',()=>{
     reload(true);
  };
  E('mgDownloadCSV').onclick=()=>{location.href='/api/management/export?'+params(sourceState());};
- E('v107Export').onclick=()=>{location.href='/api/v107/export?'+params(sourceState());};
+ E('v107Export').onclick=()=>{location.href='/api/v107/export?'+params({...sourceState(),form_mode:E('mgAuditMode').value});};
  const timer=setInterval(()=>{
     if(managementState?.ready){clearInterval(timer);if(isManagement())refreshFacets(false);}
  },120);
