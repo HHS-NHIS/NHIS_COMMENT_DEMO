@@ -186,6 +186,8 @@ async function managementComments(){
    if(E('mgFormAudit')?.open)await v107Render();
  }catch(err){if(ticket===resultsReq)E('mgFilteredSummary').textContent='Could not load filtered analysis: '+err.message;}
 }
+// Replace the former per-tab management wrapper, including initial tab loads.
+window.managementComments=managementComments;
 window.addEventListener('DOMContentLoaded',()=>{
  setup();
  const reload=async(sectionChanged=false)=>{
