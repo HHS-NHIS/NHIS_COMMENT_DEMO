@@ -81,6 +81,8 @@ async function refreshFacets(renderIfChanged=true){
  const ticket=++optionsReq;
  let wasReset=false;
  for(let round=0;round<3;round++){
+   const allOption=E('mgSection').querySelector('option[value="summary"]');
+   if(allOption)allOption.textContent='All management categories (Summary)';
    const current=sourceState();
    try{
      const result=await api('/api/v108/management-options?'+params(current));
