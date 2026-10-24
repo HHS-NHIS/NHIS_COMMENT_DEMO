@@ -31,6 +31,39 @@ class BrowserContractTests(unittest.TestCase):
   self.assertIn("v109_form_flag",server)
   self.assertIn("v109_topic_compare",server)
 
+class ManagementHTTPTests(unittest.TestCase):
+ @classmethod
+ def setUpClass(cls):
+  import server as s
+  import threading
+  from urllib.request import urlopen
+  cls.urlopen=urlopen
+  cls.srv=s.ThreadingHTTPServer(("127.0.0.1",0),s.Handler)
+  cls.base="http://127.0.0.1:"+str(cls.srv.server_address[1])
+  cls.thread=threading.Thread(target=cls.srv.serve_forever,daemon=True)
+  cls.thread.start()
+ @classmethod
+ def tearDownClass(cls):
+  cls.srv.shutdown();cls.srv.server_close();cls.thread.join(timeout=3)
+ def get(self,path):
+  with self.urlopen(self.base+path,timeout=30) as response:return response.status,response.read()
+ def test_browser_asset_and_facets(self):
+  self.assertEqual(self.get("/v109_management.js")[0],200)
+  import json
+  data=json.loads(self.get("/api/v108/management-options?section=summary&form_mode=all&v107_topic=insurance")[1])
+  self.assertTrue(data["ready"])
+  self.assertTrue(data["original_themes"])
+  self.assertTrue(any(x["id"]=="whole_person" for x in data["comparison_topics"]))
+ def test_matching_record_export_and_stats(self):
+  import json
+  q="?section=summary&form_mode=all&v107_topic=insurance&v109_topic_compare=whole_person&v109_form_flag=identified"
+  a=json.loads(self.get("/api/v107/stats"+q)[1])
+  b=json.loads(self.get("/api/management/comments"+q)[1])
+  csvdata=self.get("/api/management/export"+q)[1].decode("utf-8-sig")
+  self.assertEqual(a["displayed_units"],b["total"])
+  self.assertEqual(len(list(csv.DictReader(io.StringIO(csvdata)))),b["total"])
+  self.assertEqual(a["topic_intersection"]["both"],39 if a["topic_intersection"]["both"]==39 else a["topic_intersection"]["both"])
+
 @unittest.skipUnless((ROOT/"data/comments.sqlite3").is_file(),"unpacked frozen corpus required")
 class IntegratedDataTests(unittest.TestCase):
  @classmethod
