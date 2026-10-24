@@ -475,45 +475,52 @@ def qc(db):
             "note":"Presence is a regression gate. Classifications are provisional, require human QC; examples are not hard-coded labels."}
 
 
-def management_filter_options(db, mode="all", section="support", legacy_theme="", topic="",
-                              tier="any", subcategory="", query="", match="any", questionnaire=""):
-    """Return only relevant topic and request-type choices under other selected facets."""
+def management_filter_options(db, mode="all", section="summary", legacy_theme="", topic="",
+                              tier="any", subcategory="", query="", match="phrase", questionnaire="",
+                              topic2="", form_flag="all"):
+    """Facets depend on the other selected filters; All is always offered by UI."""
     idx=index(db)
-    def scope(**changes):
-        args=dict(mode="all",section=section,legacy_theme=legacy_theme,topic=topic,tier=tier,
-                  subcategory=subcategory if section=="content" else "",query=query,
-                  match=match,questionnaire=questionnaire)
-        args.update(changes)
-        return set(filter_result(db,**args)[1])
-    def number(ids):
-        if mode=="exclude_clusters":
-            return sum(idx["items"][cid]["cluster_size"]==1 for cid in ids)
-        if mode=="representative":
-            return len({idx["items"][cid]["cluster_id"] for cid in ids})
-        return len(ids)
-    # Ignore the current topic to allow meaningful switching to other topics.
-    candidates=scope(legacy_theme="",topic="",tier="any")
-    choices=[]
+    def cohort(**changes):
+        kw=dict(mode="all",section=section,legacy_theme=legacy_theme,topic=topic,
+                topic2=topic2,tier=tier,subcategory=subcategory if section=="content" else "",
+                query=query,match=match,questionnaire=questionnaire,form_flag=form_flag)
+        kw.update(changes)
+        return set(filter_result(db,**kw)[1])
+    legacy_candidates=cohort(legacy_theme="")
+    legacy_map=idx["semantic_themes"] if section else idx["themes"]
     import management_addon as mg
+    old=[]
     for t in mg.themes(db):
-        n=number(candidates & idx["semantic_themes"].get(t["id"],set()))
-        if n:choices.append({"kind":"legacy","id":t["id"],"label":t["name"],"count":n})
-    for tid,(label,_regex) in TOPICS.items():
-        n=number({cid for cid in candidates if tid in idx["items"][cid]["topics"]})
-        if n:choices.append({"kind":"additional","id":tid,"label":label,"count":n})
+        n=len(legacy_candidates & legacy_map.get(t["id"],set()))
+        if n:old.append({"id":t["id"],"label":t["name"],"count":n})
+    def added(exclude):
+        others=cohort(**{exclude:"", "tier":"any"})
+        counterpart=topic2 if exclude=="topic" else topic
+        options=[]
+        for name,(label,_) in TOPICS.items():
+            if name==counterpart:continue
+            n=sum(name in idx["items"][cid]["topics"] for cid in others)
+            if n:options.append({"id":name,"label":label,"count":n})
+        return options
     types=[]
     if section=="content":
-        available=scope(subcategory="")
+        candidates=cohort(subcategory="")
         for code,label in SUBCATEGORIES.items():
-            n=number({cid for cid in available if code in idx["items"][cid]["content_subcategories"]})
+            n=sum(code in idx["items"][cid]["content_subcategories"] for cid in candidates)
             if n:types.append({"id":code,"label":label,"count":n})
     roles=[]
-    if topic:
-        available=scope(tier="any")
-        for role,label in (("primary","Primary concerns"),("secondary","Secondary / incidental")):
-            n=number({cid for cid in available if idx["items"][cid]["topics"].get(topic,{}).get("role")==role})
+    if topic or topic2:
+        candidates=cohort(tier="any")
+        for role,label in (("primary","Primary concern"),("secondary","Secondary / incidental")):
+            n=sum((not topic or idx["items"][cid]["topics"].get(topic,{}).get("role")==role) and
+                  (not topic2 or idx["items"][cid]["topics"].get(topic2,{}).get("role")==role)
+                  for cid in candidates)
             if n:roles.append({"id":role,"label":label,"count":n})
-    current=scope()
-    return {"ready":True,"section":section,"topics":choices,"recommendation_types":types,
-            "topic_roles":roles,"matching_submissions":len(current),
-            "matching_display_units":number(current)}
+    current=cohort()
+    flagged=sum(idx["items"][cid]["cluster_size"]>1 for cid in current)
+    return {"ready":True,"section":section,"original_themes":old,"additional_topics":added("topic"),
+            "comparison_topics":added("topic2"),"recommendation_types":types,"topic_roles":roles,
+            "matching_submissions":len(current),"matching_display_units":len(current),
+            "identified_form_letter_submissions":flagged,
+            "unclustered_submissions":len(current)-flagged,
+            "methods":"AND intersection of multi-label assignments; all source submissions retained."}
