@@ -7,15 +7,15 @@ import v107_overlay as f
 class UITests(unittest.TestCase):
  def test_controls_and_historical_label(self):
   html=(ROOT/"app/index.html").read_text()
-  js=(ROOT/"app/v108_management.js").read_text()
+  js=(ROOT/"app/v109_management.js").read_text()
   self.assertIn('class="panel hide" id="v107GlobalPanel"',html)
-  for name in ("mgSection","mgTheme","mgContent","mgTier","mgFormMode","mgQuery","mgReset"):
+  for name in ("mgSection","mgTheme","mgTopic","mgTopicCompare","mgContent","mgTier","mgFormFlag","mgQuery","mgReset"):
    self.assertIn('id="'+name+'"',html)
-  self.assertIn("All submissions",html)
+  self.assertIn("All comments",html)
   self.assertIn("All recommendation types",html)
-  self.assertIn("All topics / measures",js)
-  self.assertIn("Original V10.6 syntheses",js)
-  self.assertIn("All management categories (Summary)",js)
+  self.assertIn("All additional topics",js)
+  self.assertIn("Full-Corpus Management Synthesis",js)
+  self.assertNotIn("V10.6",html)
 @unittest.skipUnless((ROOT/"data/comments.sqlite3").is_file(),"requires unpacked release data")
 class CorpusTests(unittest.TestCase):
  @classmethod
