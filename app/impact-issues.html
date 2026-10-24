@@ -165,7 +165,7 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const cidLink=(c,u)=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(c.replace('CDC-2026-1387-',''))}</a>`;
 const st=document.getElementById('stats');
 const must=I.filter(x=>x.must_review==='Yes').length;
-st.innerHTML=`<span><b>3,748</b> comments in docket</span><span><b>${R.length.toLocaleString()}</b> recommendations extracted</span><span><b>${new Set(R.map(r=>r.comment_id)).size}</b> comments carrying ≥1 rec</span><span><b>${I.length}</b> issues</span><span><b>${must}</b> must-review</span>`;
+st.innerHTML=`<span><b>3,748</b> publicly posted/indexed comments</span><span><b>${R.length.toLocaleString()}</b> recommendations extracted</span><span><b>${new Set(R.map(r=>r.comment_id)).size}</b> comments carrying ≥1 rec</span><span><b>${I.length}</b> issues</span><span><b>${must}</b> must-review</span>`;
 // tabs
 function show(v){for(const b of document.querySelectorAll('nav button')){const on=b.dataset.view===v;b.setAttribute('aria-selected',on);document.getElementById('view-'+b.dataset.view).hidden=!on}
   try{history.replaceState(null,'','#'+v)}catch(e){}}
