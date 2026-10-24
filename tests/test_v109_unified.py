@@ -62,7 +62,7 @@ class ManagementHTTPTests(unittest.TestCase):
   csvdata=self.get("/api/management/export"+q)[1].decode("utf-8-sig")
   self.assertEqual(a["displayed_units"],b["total"])
   self.assertEqual(len(list(csv.DictReader(io.StringIO(csvdata)))),b["total"])
-  self.assertEqual(a["topic_intersection"]["both"],39 if a["topic_intersection"]["both"]==39 else a["topic_intersection"]["both"])
+  self.assertEqual(a["topic_intersection"]["both"],b["total"])
 
 @unittest.skipUnless((ROOT/"data/comments.sqlite3").is_file(),"unpacked frozen corpus required")
 class IntegratedDataTests(unittest.TestCase):
