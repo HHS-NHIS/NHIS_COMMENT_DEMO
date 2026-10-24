@@ -12,6 +12,7 @@
 <button class="nav" data-tab="qc"><span>◎</span> Corpus QC</button>
 <button class="nav" data-tab="imports"><span>⇪</span> Data & exports</button>
 <button class="nav" data-tab="management"><span>▦</span> Management Analysis</button>
+<button class="nav" data-tab="impact"><span>▥</span> Issue Prioritization</button>
 <button class="nav hide" data-tab="feedback" tabindex="-1" aria-hidden="true"><span>☰</span> Form-Letter Analysis</button>
 </nav><div class="sidebar-note">Preliminary management demo. Counts refer to comment records, not unique people. AI themes and category labels require analyst review; four reviewed attachments contain no written text.</div></aside>
 <main class="main"><div class="topbar"><div class="breadcrumbs">Public comment analysis <span>/</span> 2028 NHIS redesign</div><div class="top-state"><span class="dot"></span> Public evidence demo · Read-only</div></div>
@@ -94,6 +95,14 @@
 <div id="localCompareResults" aria-live="polite"></div>
 <p class="footnote">This is a sampled evidence review, not a legal adequacy determination or systematic full-corpus gap audit. API requests use store=false, but organizational data-handling approval is still required. Read the original comments before management use.</p></article>
 </section>
+<section id="tab-impact" class="tabpanel hide" aria-labelledby="impactTabTitle">
+<article class="panel">
+<div class="panelhead"><div><h2 id="impactTabTitle">Issue Prioritization &amp; Impact Analysis</h2>
+<p>Independent, AI-assisted issue extraction and prioritization from the same 3,748 publicly indexed comments. Explore 201 identified issues and 1,464 extracted recommendations by survey section, requested action, stance, and issue-level score.</p></div></div>
+<p class="footnote"><strong>Interpretation and QC:</strong> All 1,464 quoted passages were independently matched to frozen comment or attachment text. Scores (specificity, evidence/expertise, consequence, feasibility, and novelty) are preliminary analyst-screening judgments, not measured policy impact or verified agency priorities. Source-specific form-letter counts may differ from the V10.9 generalized clustering; counts must not be combined across these analyses without reconciling definitions. The existing management classification and reports are unchanged.</p>
+<iframe id="impactIssuesFrame" title="Issue Prioritization and Impact Analysis — issues, recommendations and methodology" src="/impact-issues.html" loading="lazy" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer" style="display:block;width:100%;height:76vh;min-height:740px;border:1px solid #d7ddd9;border-radius:7px;background:#fff"></iframe>
+<p class="footnote">The embedded analysis contains its own Issues, Recommendations, and Method &amp; caveats views. Its filters and issue-level scores operate independently of the Management Analysis dropdowns. For easier full-screen review, <a href="/impact-issues.html" target="_blank" rel="noopener noreferrer">open the full analysis in a new tab ↗</a>.</p>
+</article></section>
 <section id="tab-qc" class="tabpanel hide">
 <div class="twocol"><article class="panel"><div class="panelhead"><div><h2>Corpus reconciliation & limitations</h2><p>API index counts publicly posted comments, not all received submissions.</p></div></div>
 <div id="qcMeasures" class="integrity"></div><p class="footnote">The October 21, 2026 public API inventory contained 3,748 posted comments, all imported. Portal received counts are separate and may change; the saved inventory does not establish a final total of all submissions.</p>

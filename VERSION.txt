@@ -1,5 +1,5 @@
 NHIS 2028 Redesign Public Comment Intelligence — read-only public release
-Version: V10.9 interface (2026-10-24) with V10.8.2 topic-focus and generic clustering screen
+Version: V10.10 Issue Prioritization add-on (2026-10-24), preserving V10.9 management analysis and V10.8.2 coding
 Public source: Regulations.gov docket CDC-2026-1387, 3,748 publicly indexed comments.
 Management reporting: eight nonexclusive categories; 15 additional deterministic topics; all provisional and not human-adjudicated.
 Form-letter treatments: all submissions, representative per inferred text cluster, exclude clustered submissions. Additional template links are flagged for review, never persisted to the frozen source database.
@@ -7,3 +7,5 @@ Existing V10.6 management prose and downloadable Word reports are full-corpus hi
 No login, database writes, or paid model calls in hosted mode.
 
 V10.9 Management Analysis combines the earlier management sections, original AI themes, 15 management-requested topics, optional two-topic intersection, form-letter identification, conditional Content types, source evidence, and historical reports. The frozen source and precompiled prose remain unchanged.
+
+V10.10 embeds a separate read-only, AI-assisted 201-issue/1,464-recommendation ledger based on 3,748 public comments. All issue priority scores and source-specific form-letter counts are provisional and methodologically distinct. The frozen SQLite corpus, management coding, and historical reports remain unchanged.

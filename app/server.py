@@ -171,7 +171,7 @@ class Handler(BaseHTTPRequestHandler):
         self._response({'error':'Authentication required'},401,
             extra={'WWW-Authenticate':'Basic realm="NHIS Comment Demo", charset="UTF-8"'})
 
-    def _response(self, content, code=200, ctype='application/json; charset=utf-8', extra=None):
+    def _response(self, content, code=200, ctype='application/json; charset=utf-8', extra=None, embedded=False):
         if isinstance(content,(dict,list)):
             content=json.dumps(content,ensure_ascii=False).encode('utf-8')
         elif isinstance(content,str):
@@ -179,9 +179,14 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header('Content-Type',ctype)
         self.send_header('X-Content-Type-Options','nosniff')
-        self.send_header('X-Frame-Options','DENY')
+        self.send_header('X-Frame-Options','SAMEORIGIN' if embedded else 'DENY')
         self.send_header('Referrer-Policy','no-referrer')
-        self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
+        if embedded:
+            # Restrict the supplied, static issue ledger to a sandboxed same-site frame.
+            # Inline JS powers sorting and filtering; no API calls or writes are allowed.
+            self.send_header('Content-Security-Policy',"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'")
+        else:
+            self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
         self.send_header('Cache-Control','no-store')
         if HOSTED: self.send_header('Strict-Transport-Security','max-age=31536000; includeSubDomains')
         self.send_header('Content-Length',str(len(content)))
@@ -376,6 +381,8 @@ class Handler(BaseHTTPRequestHandler):
                          else export_report(db,kind,theme=q.get('theme'),phrase=q.get('q'),query_mode=q.get('match','any')))
                     prefix='SYNTHETIC_TEST_' if metadata(db)['mode']=='synthetic demo' else ''
                 self._response(csv,ctype='text/csv; charset=utf-8',extra={'Content-Disposition':f'attachment; filename="{prefix}nhis_{kind}.csv"'})
+            elif path=='/impact-issues.html':
+                self._response((ASSETS/'impact-issues.html').read_bytes(),ctype='text/html; charset=utf-8',embedded=True)
             elif path in ('/','/index.html','/style.css','/app.js','/v107.js','/v108_management.js','/v109_management.js'):
                 name='index.html' if path=='/' else path[1:]
                 mime=mimetypes.guess_type(name)[0] or 'application/octet-stream'
