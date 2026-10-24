@@ -517,11 +517,17 @@ def management_filter_options(db, mode="all", section="summary", legacy_theme=""
                   (not topic2 or idx["items"][cid]["topics"].get(topic2,{}).get("role")==role)
                   for cid in candidates)
             if n:roles.append({"id":role,"label":label,"count":n})
+    flags_pool=cohort(form_flag="all")
+    flag_options=[]
+    for flag,label in (("identified","Identified likely form-letter / near-duplicate text"),("not_identified","No identified form-letter text")):
+        n=sum((idx["items"][cid]["cluster_size"]>1)==(flag=="identified") for cid in flags_pool)
+        if n:flag_options.append({"id":flag,"label":label,"count":n})
     current=cohort()
     flagged=sum(idx["items"][cid]["cluster_size"]>1 for cid in current)
     return {"ready":True,"section":section,"topics":([{"kind":"legacy",**x} for x in old]+[{"kind":"additional",**x} for x in added("topic")]),
             "original_themes":old,"additional_topics":added("topic"),
             "comparison_topics":added("topic2"),"recommendation_types":types,"topic_roles":roles,
+            "form_flag_choices":flag_options,
             "matching_submissions":len(current),"matching_display_units":len(current),
             "identified_form_letter_submissions":flagged,
             "unclustered_submissions":len(current)-flagged,
