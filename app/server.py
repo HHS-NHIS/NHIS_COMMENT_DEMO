@@ -88,13 +88,14 @@ def feedback_options(q, management_view=False):
     selected=q.get('theme','')
     extra_topic=selected[len('v108__'):] if selected.startswith('v108__') else ''
     return dict(mode=q.get('form_mode','all'), section=q.get('section','') if management_view else '',
-        legacy_theme='' if extra_topic else selected, topic=extra_topic or q.get('v107_topic',''),
+        legacy_theme=q.get('theme_original','' if extra_topic else selected), topic=extra_topic or q.get('v107_topic',''),
         tier=q.get('v107_tier','any'), subcategory=q.get('v107_content',''),
+        topic2=q.get('v109_topic_compare',''),form_flag=q.get('v109_form_flag','all'),
         query=q.get('q',''), match=q.get('match','phrase' if management_view else 'any'),
         questionnaire=q.get('questionnaire',''))
 
 def feedback_requested(q):
-    return any(q.get(k) for k in ('form_mode','v107_topic','v107_tier','v107_content'))
+    return any(q.get(k) for k in ('form_mode','v107_topic','v107_tier','v107_content','v109_form_flag','v109_topic_compare'))
 
 def sem_csv(db,kind):
     sql={
