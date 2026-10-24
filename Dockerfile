@@ -11,6 +11,9 @@ COPY tests/test_v107_http.py ./tests/test_v107_http.py
 COPY tests/test_v108_management.py ./tests/test_v108_management.py
 COPY themes.json ./themes.json
 COPY VERSION.txt ./VERSION.txt
+COPY README.md ./README.md
+COPY DEMO_READINESS_QC.md ./DEMO_READINESS_QC.md
+COPY scripts/run_release_qc.py ./scripts/run_release_qc.py
 COPY tests/test_v1082.py ./tests/test_v1082.py
 COPY tests/test_v109_unified.py ./tests/test_v109_unified.py
 COPY tests/test_v110_impact.py ./tests/test_v110_impact.py
