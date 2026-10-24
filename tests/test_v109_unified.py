@@ -20,6 +20,7 @@ class BrowserContractTests(unittest.TestCase):
   for k in ('Full-Corpus Management Synthesis','mgFormAudit','mgAuditMode',
             'topic_intersection','mgDownloadCSV','mgFormFlag','v107Render'):
    self.assertIn(k,j)
+  self.assertIn("All management categories (Summary)",j)
  def test_responsive_topic_labels(self):
   css=(ROOT/"app/style.css").read_text()
   self.assertNotIn('grid-template-columns:45px',css)
