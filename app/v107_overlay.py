@@ -268,9 +268,11 @@ def index(db):
         return _cached
 
 def filter_result(db, mode="all", section="", legacy_theme="", topic="", tier="any",
-                  subcategory="", query="", match="any", questionnaire=""):
+                  subcategory="", query="", match="any", questionnaire="", topic2="", form_flag="all"):
     if mode not in MODES:raise ValueError("Invalid form-letter mode")
     if topic and topic not in TOPICS:raise ValueError("Unknown added topic")
+    if topic2 and topic2 not in TOPICS:raise ValueError("Unknown comparison topic")
+    if form_flag not in ("all","identified","not_identified"):raise ValueError("Unknown form-letter flag")
     if tier not in ("any","primary","secondary"):raise ValueError("Invalid topic role")
     if subcategory and subcategory not in SUBCATEGORIES:raise ValueError("Unknown Content subcategory")
     if len(query)>300:raise ValueError("Query too long")
@@ -297,6 +299,9 @@ def filter_result(db, mode="all", section="", legacy_theme="", topic="", tier="a
     if topic:
         ids &= {cid for cid,item in idx["items"].items() if
                 topic in item["topics"] and (tier=="any" or item["topics"][topic]["role"]==tier)}
+    if topic2:
+        ids &= {cid for cid,item in idx["items"].items() if topic2 in item["topics"] and
+                (tier=="any" or item["topics"][topic2]["role"]==tier)}
     if subcategory:
         ids &= {cid for cid,item in idx["items"].items() if subcategory in item["content_subcategories"]}
     if query.strip():
@@ -307,6 +312,10 @@ def filter_result(db, mode="all", section="", legacy_theme="", topic="", tier="a
         if match=="phrase":parts=[query.strip().strip('"').casefold()]
         require=all if match=="all" else any
         ids={cid for cid in ids if require(token in idx["search_text"][cid] for token in parts)}
+    if form_flag=="identified":
+        ids={cid for cid in ids if idx["items"][cid]["cluster_size"]>1}
+    elif form_flag=="not_identified":
+        ids={cid for cid in ids if idx["items"][cid]["cluster_size"]==1}
     submission_ids=set(ids)
     if mode=="exclude_clusters":
         ids={cid for cid in ids if idx["items"][cid]["cluster_size"]==1}
@@ -349,7 +358,7 @@ def comments(db, **kw):
 
 def support_review_summary(db,kw,idx):
     """Undecided measure-support signals, NEVER included in Support totals."""
-    settings={k:kw.get(k) for k in ("legacy_theme","topic","tier","query","match")}
+    settings={k:kw.get(k) for k in ("legacy_theme","topic","topic2","tier","query","match","form_flag","subcategory")}
     settings={k:v for k,v in settings.items() if v is not None}
     _,candidates,_=filter_result(db,section="summary",mode="all",**settings)
     import management_addon as mg
