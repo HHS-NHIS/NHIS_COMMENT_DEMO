@@ -68,11 +68,31 @@ body.hosted.private-preview #tab-review>article.panel{display:none!important}
 .management-rules summary{cursor:pointer;font-weight:700;font-size:1rem;padding:5px 0}
 #mgRuleDescription{margin:9px 0;line-height:1.55}
 #mgOverlapExplanation{padding:10px 0;font-weight:600}
-.management-rule-row{display:grid;grid-template-columns:45px minmax(0,1fr) 125px;gap:10px;padding:8px 0;border-top:1px solid var(--border,#e4e6e9);align-items:start}
+.management-rule-row{display:grid;grid-template-columns:minmax(155px,1fr) minmax(0,2.2fr) minmax(105px,.55fr);gap:14px;padding:12px 0;border-top:1px solid var(--border,#e4e6e9);align-items:start;min-width:0}.management-rule-row>strong,.management-rule-row>span,.management-rule-row>small{min-width:0;overflow-wrap:break-word;word-break:normal;white-space:normal}
 .management-rule-row small{text-align:right;opacity:.75}
-@media(max-width:620px){.management-rule-row{grid-template-columns:40px minmax(0,1fr)}.management-rule-row small{grid-column:2;text-align:left}}
+@media(max-width:760px){.management-rule-row{grid-template-columns:minmax(0,1fr)}.management-rule-row small{grid-column:1;text-align:left}}
 
 .management-combo{background:var(--bg2,#f5f8fb);border:1px solid var(--border,#ccd5df);border-left:4px solid var(--accent,#2b6a89);border-radius:10px;padding:15px 16px;margin:10px 0 18px;overflow-wrap:anywhere}
 .management-combo h3{margin:0 0 10px;font-size:1.05rem}
 .management-combo p{line-height:1.55;margin:9px 0}
 .management-combo .tags{display:flex;gap:6px;flex-wrap:wrap}
+
+/* V10.9 integrated management analyst layout; no cramped 45px label column. */
+#tab-management #mgIntegratedFilters,#tab-management .formrow:has(#mgTheme){display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));align-items:end;gap:12px}
+#tab-management #mgIntegratedFilters label,#tab-management .formrow:has(#mgTheme) label{min-width:0;width:100%}
+#tab-management select,#tab-management input{width:100%;min-width:0}
+#tab-management #mgFilteredSummary{border:1px solid #dce5df;border-radius:10px;padding:18px;margin:14px 0 22px;min-width:0}
+#tab-management .mg-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin:12px 0}
+#tab-management .mg-kpi{background:#f6f9f7;border:1px solid #e1e7e2;border-radius:9px;padding:12px}
+#tab-management .mg-kpi strong{display:block;font-size:24px;font-variant-numeric:tabular-nums}
+#tab-management .mg-kpi span{color:#64786c;font-size:11px}
+#tab-management .mg-topics-table{width:100%;border-collapse:collapse;table-layout:fixed}
+#tab-management .mg-topics-table th,#tab-management .mg-topics-table td{padding:9px 10px;border-bottom:1px solid #e5ebe6;vertical-align:top;overflow-wrap:anywhere;text-align:left}
+#tab-management .mg-topics-table th:first-child{width:48%}
+#tab-management .mg-topics-table td:not(:first-child){font-variant-numeric:tabular-nums}
+#tab-management details.mg-reference{margin:18px 0;padding:14px;border:1px solid #dce5df;border-radius:10px}
+#tab-management details.mg-reference>summary{cursor:pointer;font-size:14px;font-weight:700;line-height:1.5}
+#tab-management details.mg-reference .management-rule-row{grid-template-columns:minmax(155px,1fr) minmax(0,2fr) minmax(110px,.7fr)}
+#tab-management #mgTopicOverlap{margin:14px 0;padding:12px;background:#f5f8f6;border-radius:9px}
+#tab-management #mgFormAudit{margin-top:20px}
+@media(max-width:760px){#tab-management details.mg-reference .management-rule-row{grid-template-columns:minmax(0,1fr)}}
