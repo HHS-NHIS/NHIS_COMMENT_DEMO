@@ -519,7 +519,8 @@ def management_filter_options(db, mode="all", section="summary", legacy_theme=""
             if n:roles.append({"id":role,"label":label,"count":n})
     current=cohort()
     flagged=sum(idx["items"][cid]["cluster_size"]>1 for cid in current)
-    return {"ready":True,"section":section,"original_themes":old,"additional_topics":added("topic"),
+    return {"ready":True,"section":section,"topics":([{"kind":"legacy",**x} for x in old]+[{"kind":"additional",**x} for x in added("topic")]),
+            "original_themes":old,"additional_topics":added("topic"),
             "comparison_topics":added("topic2"),"recommendation_types":types,"topic_roles":roles,
             "matching_submissions":len(current),"matching_display_units":len(current),
             "identified_form_letter_submissions":flagged,
